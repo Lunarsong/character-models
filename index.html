@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RTS Characters</title>
+<meta name="description" content="Work-in-progress rigged male and female characters for a fantasy RTS game, viewable in the browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef0ec; --card:#ffffff; --ink:#1d2430; --muted:#566170; --line:rgba(29,36,48,.12); --accent:#2d4fbf; --accent-ink:#fff;
+  --gold:#b8862d;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#141a23; --card:#1c2430; --ink:#e8ecf0; --muted:#a2acb8; --line:rgba(232,236,240,.12); --accent:#7d9bff; --accent-ink:#0e1420; --gold:#e0b04e; }
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 "Alegreya Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  padding:max(24px,env(safe-area-inset-top)) 16px 48px}
+main{max-width:1080px;margin:0 auto}
+header{margin:8px 0 28px}
+h1{font:700 clamp(32px,5vw,48px)/1.05 "Alegreya",Georgia,serif;margin:0 0 10px;letter-spacing:-.01em;text-wrap:balance}
+h1 span{color:var(--gold)}
+.lede{max-width:66ch;color:var(--muted);margin:0}
+h2{font:700 24px/1.2 "Alegreya",Georgia,serif;margin:36px 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;
+  text-decoration:none;color:inherit;transition:transform .15s ease, box-shadow .15s ease}
+.card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.card img{display:block;width:100%;aspect-ratio:14/9;object-fit:cover;background:#1b222c}
+.card .body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:4px}
+.card strong{font:700 18px/1.2 "Alegreya",Georgia,serif}
+.card small{color:var(--muted);font-size:14px}
+.tag{align-self:flex-start;font:500 12px/1 "Alegreya Sans",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:2px}
+ul{padding-left:20px;max-width:70ch} li{margin:4px 0}
+.note{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;max-width:76ch}
+code{font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--line);padding:1px 5px;border-radius:4px}
+.tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:15px}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+th{font:500 12px/1.2 "Alegreya Sans",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td:first-child{font-weight:700;white-space:nowrap}
+td.none{color:var(--muted)}
+footer{margin-top:40px;color:var(--muted);font-size:14px}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>RTS <span>Characters</span></h1>
+  <p class="lede">Work-in-progress rigged human characters for a fantasy real-time strategy game: male and female base bodies on one
+  shared game skeleton, with facial expressions, ARKit-style face shapes and visemes, customisation sliders, hair and brow options, poses,
+  hand grips and animation clips. Everything runs in your browser.</p>
+</header>
+
+<h2>Character pages</h2>
+<p class="lede" style="margin-bottom:14px">Customise the face and body, switch hair, brows and lashes, try expressions, poses and hand grips.</p>
+<div class="grid">
+  <a class="card" href="viewers/base_female.html"><img src="images/base_female.jpg" alt="Female character page" loading="lazy">
+    <div class="body"><span class="tag">Character</span><strong>Female</strong><small>Sliders, hair, expressions, poses · 66 MB</small></div></a>
+  <a class="card" href="viewers/base_male.html"><img src="images/base_male.jpg" alt="Male character page" loading="lazy">
+    <div class="body"><span class="tag">Character</span><strong>Male</strong><small>Sliders, hair, expressions, poses · 82 MB</small></div></a>
+</div>
+
+<h2>Look-dev pages</h2>
+<p class="lede" style="margin-bottom:14px">Animation clips with play and scrub, every face shape and viseme, hand grip presets, lighting and shading modes.</p>
+<div class="grid">
+  <a class="card" href="viewers/base_female_lookdev.html"><img src="images/base_female_lookdev.jpg" alt="Female look-dev page" loading="lazy">
+    <div class="body"><span class="tag">Look-dev</span><strong>Female</strong><small>Animations, face shapes, grips · 66 MB</small></div></a>
+  <a class="card" href="viewers/base_male_lookdev.html"><img src="images/base_male_lookdev.jpg" alt="Male look-dev page" loading="lazy">
+    <div class="body"><span class="tag">Look-dev</span><strong>Male</strong><small>Animations, face shapes, grips · 83 MB</small></div></a>
+</div>
+
+<h2>Using the viewers</h2>
+<ul>
+  <li>Each page carries its whole model, so the first load downloads 66-83 MB; give it a moment on slower connections.</li>
+  <li>Drag to orbit, right-drag to pan, scroll to zoom. A current Chrome, Edge, Firefox or Safari works best.</li>
+  <li>Character pages: <em>Customise</em> and <em>Randomise</em> for the face and body sliders, the expression buttons (Smile, Wink,
+  Talk...), the pose buttons (Squat, Lunge, Kneel, Sit, Fists...) and the hand-pose menu (sword, hammer, knife, bow grips...).</li>
+  <li>Look-dev pages: the <em>Animation</em> menu, <em>Hands</em> camera, lighting and shading modes, and the Shapes tab for every face shape.</li>
+</ul>
+
+<h2>Work in progress</h2>
+<div class="note">
+  <ul style="margin:0">
+    <li>Hair is an early version: card edges and scalp gaps show up close, and the female braid is rough. A rebuilt hair set is on the way.
+    On the character page, switching away from the braid may leave it visible.</li>
+    <li>The hand grips are new; some finger contacts are still being tuned.</li>
+    <li>The armoured knight and the other outfits (archer, peasant, mage) are being rebuilt and are not in this preview yet.</li>
+  </ul>
+</div>
+
+<h2>What comes from MakeHuman, and what is ours</h2>
+<p class="lede" style="margin-bottom:14px">The bodies start from the free (CC0) <a href="http://www.makehumancommunity.org">MakeHuman</a> base
+assets, loaded with the <a href="https://static.makehumancommunity.org/mpfb.html">MPFB</a> Blender add-on at build time. The body mesh keeps
+MakeHuman's topology (armour and clothes are fitted to it); its shape comes from MakeHuman's own sliders at values we chose. Everything that
+turns it into a game character is built by our pipeline.</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Area</th><th>From MakeHuman (CC0)</th><th>Built by us</th></tr></thead>
+  <tbody>
+    <tr><td>Body mesh</td><td>Base mesh and topology; shape from its sliders (gender, muscle, weight, proportions, face targets)</td>
+      <td>The chosen settings, pose-driven corrective shapes (shoulders, armpits, groin, elbows), reworked skin weights, body split into 18 regions for armour</td></tr>
+    <tr><td>Rig</td><td>Joint placement and skin weights of the default MakeHuman rig</td>
+      <td>97-bone game skeleton (engine-style hierarchy, twist and helper bones, face rig), shared male/female rest pose, foot-contact solver, hand-grip library</td></tr>
+    <tr><td>Face</td><td>ARKit 52 face shapes and 15 visemes (community packs by Mika Suominen)</td>
+      <td>Fixes (eye sockets, closed lids, wink, brows and lashes following the lids, lip seal), expression presets, talk demo</td></tr>
+    <tr><td>Customisation</td><td>Raw face and body targets</td>
+      <td>Two-way sliders, carried onto every part (brows, lashes, hair, clothing), skeleton refit for extreme shapes</td></tr>
+    <tr><td>Parts</td><td>Eyes, 12 eyebrow styles, 4 lash sets, tongue, the bob / long / ponytail / short hair styles</td>
+      <td>28-tooth dentition and gums, eyeball + clear cornea split, crop and braid grooms, beards, a new hair system in progress</td></tr>
+    <tr><td>Skin</td><td>Base skin colour textures</td>
+      <td>Normal maps from a subdivided body, pores, roughness, ambient occlusion, grading, skin-tone variants</td></tr>
+    <tr><td>Clothing and armour</td><td>MPFB's fitting mechanism (pieces follow body shapes and inherit skin weights)</td>
+      <td>All the geometry, materials and heraldry (knight, archer, peasant), plus automated fit and intersection checks</td></tr>
+    <tr><td>Animation and poses</td><td class="none">None</td><td>All clips, poses and grips</td></tr>
+    <tr><td>Export and viewers</td><td class="none">None</td><td>glTF export and validation, QA tools, these viewer pages</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Source</h2>
+<p class="lede">The pipeline that builds these characters is in <a href="https://github.com/Lunarsong/character-models/tree/main/source"><code>source/</code></a>:
+headless Blender scripts on top of MPFB and the CC0 MakeHuman assets, plus the web viewer templates. See the README there.</p>
+
+<footer>Built with Blender, <a href="https://static.makehumancommunity.org/mpfb.html">MPFB</a> and CC0 MakeHuman assets; viewers use
+<a href="https://threejs.org">three.js</a>.</footer>
+</main>
+</body>
+</html>
