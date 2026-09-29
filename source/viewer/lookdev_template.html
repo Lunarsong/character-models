@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__TITLE__</title>
+<!-- Character look-dev viewer. Written by characters/viewer/make_viewer.py from characters/viewer/lookdev_template.html
+     (three.js r147, GLBs embedded as base64). Scripting API for headless shots: window.LD (see characters/viewer/shot.sh). -->
+<style>
+:root{
+  --bg-top:#b1b9c3; --bg-bottom:#e5e6e3; --ink:#1b222c; --muted:#56616f; --panel:rgba(247,248,247,.9);
+  --line:rgba(27,34,44,.15); --soft:rgba(27,34,44,.06); --accent:#2d4fbf; --accent-ink:#fff; --focus:#c8962e;
+  --sky-top:#8aafd8; --sky-bottom:#e8e2d0; --cap-bg:rgba(12,16,22,.74); --cap-ink:#f4f1ea; --cap-on:#f0c35a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg-top:#141b26; --bg-bottom:#2c3542; --ink:#e8ecf0; --muted:#a3adb9; --panel:rgba(20,26,35,.88);
+    --line:rgba(232,236,240,.15); --soft:rgba(232,236,240,.06); --accent:#7d9bff; --accent-ink:#0e1420; --focus:#e6b24a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg-top:#141b26; --bg-bottom:#2c3542; --ink:#e8ecf0; --muted:#a3adb9; --panel:rgba(20,26,35,.88);
+  --line:rgba(232,236,240,.15); --soft:rgba(232,236,240,.06); --accent:#7d9bff; --accent-ink:#0e1420; --focus:#e6b24a;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{overflow:hidden;color:var(--ink);font:13.5px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:linear-gradient(180deg,var(--bg-top),var(--bg-bottom))}
+body.town{background:linear-gradient(180deg,var(--sky-top),var(--sky-bottom))}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+.panel{position:fixed;z-index:2;top:16px;background:var(--panel);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--line);border-radius:12px;padding:12px 14px;max-height:calc(100% - 32px);overflow:auto;overscroll-behavior:contain}
+#left{left:16px;width:292px}
+#right{right:16px;width:320px}
+body.noui .panel{display:none!important}
+body.clean .panel,body.clean #fab,body.clean #mfab{display:none!important}
+h1{font-size:16px;margin:0 0 2px;line-height:1.25}
+h2{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:12px 0 5px;font-weight:600}
+.sub{color:var(--muted);font-size:12.5px;margin:0 0 6px}
+.stats{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;margin:0}
+.row{display:flex;flex-wrap:wrap;gap:5px}
+button,select,input[type=search]{font:inherit;font-size:12.5px;color:var(--ink);background:transparent;border:1px solid var(--line);
+  border-radius:7px;padding:4px 8px}
+button{cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent)}
+button.on,button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:default}
+select{width:100%;background:var(--panel)}
+select option,select optgroup{background:var(--bg-bottom);color:var(--ink)}
+input[type=search]{width:100%;background:var(--soft)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+input[type=range]{width:100%;accent-color:var(--accent);margin:0;min-width:0}
+.sl{display:grid;grid-template-columns:minmax(0,1fr) 92px 36px;align-items:center;gap:6px;font-size:12px;margin:1px 0}
+.sl>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl small{color:var(--muted);font-size:10.5px;margin-left:3px}
+.sl output{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted)}
+.sl.auto output{color:var(--accent)}
+.anim{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px;align-items:center;margin-top:6px}
+.tl{font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted);min-width:84px;text-align:right}
+details{border-top:1px solid var(--line);padding:2px 0}
+summary{cursor:pointer;font-weight:600;font-size:12.5px;padding:4px 0}
+.cnt{color:var(--muted);font-weight:400}
+.tabs{display:flex;gap:5px;margin-bottom:8px}
+.tabs button{flex:1}
+.bar{display:flex;gap:5px;margin-bottom:8px}
+.bar input{flex:1}
+.grp{border-top:1px solid var(--line);padding:6px 0 4px}
+.grp-h{display:flex;align-items:center;gap:5px;font-weight:600;font-size:12.5px;margin-bottom:2px}
+.grp-h>span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grp-h button{padding:1px 6px;font-size:11.5px}
+.item{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:6px;font-size:12.5px;padding:2px 0;cursor:pointer}
+.item input{margin:0;accent-color:var(--accent)}
+.item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item small{color:var(--muted);font-variant-numeric:tabular-nums}
+.note{color:var(--muted);font-size:11.5px;margin:4px 0 0}
+.help{color:var(--muted);font-size:11.5px;margin:12px 0 0}
+#status{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:3;font-size:12.5px;background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;padding:5px 12px;max-width:calc(100% - 32px)}
+#status[hidden],#caption[hidden]{display:none}
+#caption{position:fixed;left:50%;bottom:60px;transform:translateX(-50%);z-index:2;background:var(--cap-bg);color:var(--cap-ink);
+  border-radius:10px;padding:8px 16px;font-size:19px;font-weight:600;max-width:calc(100% - 32px);text-align:center;pointer-events:none}
+#caption .on{color:var(--cap-on)}
+#fab{display:none;position:fixed;z-index:3;right:16px;bottom:16px;background:var(--panel);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+body.noui #fab{display:block}
+#mfab{display:none}
+@media (max-width:760px){
+  #left,#right{left:16px;right:16px;width:auto;top:auto;bottom:62px;max-height:46%}
+  #right{display:none}
+  body.show-right #right{display:block}
+  body.show-right #left{display:none}
+  #mfab{display:block;position:fixed;z-index:3;right:16px;bottom:16px;background:var(--panel)}
+  body.noui #mfab{display:none}
+  #caption{bottom:auto;top:16px;font-size:16px}
+}
+</style>
+</head>
+<body>
+<canvas id="c" tabindex="0" aria-label="3D view of the character. Drag to orbit, right-drag to pan, scroll to zoom."></canvas>
+<section class="panel" id="left" aria-label="Viewer controls">
+  <h1>__TITLE__</h1>
+  <p class="sub">__SUB__</p>
+  <p class="stats" id="stats">loading…</p>
+  <h2>Camera</h2><div class="row" id="views"></div>
+  <h2>Scene</h2><div class="row" id="scenes"></div>
+  <h2>Shading</h2><div class="row" id="shading"></div>
+  <h2>Show</h2><div class="row" id="toggles"></div>
+  <h2>Light</h2><div id="lightSl"></div>
+  <div id="animSec">
+    <h2>Animation</h2>
+    <select id="clip" aria-label="Animation clip"></select>
+    <div class="anim">
+      <button type="button" id="play" aria-label="Play">Play</button>
+      <input type="range" id="scrub" min="0" max="1" step="0.001" value="0" aria-label="Clip time">
+      <span class="tl" id="tl">–</span>
+    </div>
+    <div class="row" style="margin-top:6px" id="animOpts"></div>
+  </div>
+  <div id="faceSec">
+    <h2>Face</h2>
+    <div class="row" id="talkRow"></div>
+    <div class="row" id="exprs" style="margin-top:5px"></div>
+  </div>
+  <p class="help">Drag to orbit, right-drag to pan, scroll to zoom. Keys: number keys = camera presets, Space play, T talk, K skeleton, W wireframe, H panels.</p>
+</section>
+<aside class="panel" id="right" aria-label="Pieces and shapes">
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" id="tabPieces" aria-selected="true" class="on">Pieces</button>
+    <button type="button" role="tab" id="tabShapes" aria-selected="false">Shapes</button>
+  </div>
+  <div id="pieces" role="tabpanel" aria-labelledby="tabPieces"></div>
+  <div id="shapes" role="tabpanel" aria-labelledby="tabShapes" hidden>
+    <div class="bar"><input type="search" id="shapeFilter" placeholder="Filter shapes" aria-label="Filter shapes"><button type="button" id="shapeReset">Reset</button></div>
+    <p class="note" id="shapeNote"></p>
+    <div id="morphs"></div>
+  </div>
+</aside>
+<div id="caption" hidden aria-live="polite"></div>
+<div id="status">loading…</div>
+<button type="button" id="fab">Show panels</button>
+<button type="button" id="mfab">Pieces &amp; shapes</button>
+<!--__DATA__-->
+<!--__THREE__-->
+<script>/* template guard: this file is the viewer TEMPLATE (placeholders are filled by make_viewer.py / mkviewer_char.py);
+   opened directly it has no model, so say so instead of failing with ReferenceErrors */
+if (/^__[A-Z_]+__$/.test(document.title) || document.title === '' && document.getElementById('glb') && /^__/.test(document.getElementById('glb').textContent)) {
+  window.__TEMPLATE__ = true;
+  document.addEventListener('DOMContentLoaded', () => { document.body.innerHTML = '<div style="font:15px system-ui;color:#dde;background:#161a22;padding:40px;min-height:100vh">' +
+    '<h2>This is a viewer template, not a viewer</h2><p>Open a built page instead, e.g. <code>viewer/base_male_lookdev.html</code>, ' +
+    '<code>viewer/base_female_lookdev.html</code>, <code>viewer/base_male.html</code> or <code>viewer/knight_*.html</code> (built by ' +
+    '<code>viewer/make_viewer.py</code> / <code>viewer/build_lookdev.sh</code>).</p></div>'; });
+  window.addEventListener('error', e => e.preventDefault(), true);
+}
+</script>
+<script src="hand_poses.js"></script>
+<script>
+'use strict';
+const CFG = /*__CFG__*/null;
+const $ = s => document.querySelector(s);
+const statusEl = $('#status');
+const setStatus = t => { statusEl.textContent = t || ''; statusEl.hidden = !t; };
+window.__ERRORS__ = [];
+const fail = msg => { window.__ERRORS__.push(msg); window.__FAILED__ = msg; setStatus('error: ' + msg); };
+addEventListener('error', e => fail(e.message + (e.lineno ? ' (line ' + e.lineno + ')' : '')));
+addEventListener('unhandledrejection', e => fail(String(e.reason && e.reason.message || e.reason)));
+if (!window.THREE || !THREE.GLTFLoader || !THREE.OrbitControls) { fail('three.js failed to load'); throw new Error('three'); }
+
+const D2R = Math.PI / 180;
+const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
+const V = (x, y, z) => new THREE.Vector3(x, y, z).normalize();
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const fmt = n => Math.round(n).toLocaleString('en-US');
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+
+// ---------------------------------------------------------------- renderer, scene, lights
+const canvas = $('#c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias: true, alpha: true});
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.setSize(innerWidth, innerHeight, false);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envTex = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04).texture;
+scene.environment = envTex;
+const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.01, 800);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.12; controls.minDistance = 0.12; controls.maxDistance = 220;
+
+const key = new THREE.DirectionalLight(0xfff0de, 1.6); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.00025; key.shadow.normalBias = 0.018;
+const fill = new THREE.DirectionalLight(0xd9e4ff, 0.45);
+const rim = new THREE.DirectionalLight(0xe6eeff, 1.3);
+const hemi = new THREE.HemisphereLight(0xe3e9f2, 0x3b362f, 0.32);
+scene.add(key, key.target, fill, rim, hemi);
+
+const charRoot = new THREE.Group(); charRoot.name = '__character__'; scene.add(charRoot);
+const studio = new THREE.Group(), town = new THREE.Group(); scene.add(studio, town); town.visible = false;
+{ // studio floor: a disc that fades out at the edge and catches the shadows
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gr.addColorStop(0, '#fff'); gr.addColorStop(0.55, '#fff'); gr.addColorStop(1, '#000');
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(1, 96), new THREE.MeshStandardMaterial({
+    color: 0x161514, roughness: 0.9, metalness: 0, envMapIntensity: 0.7, transparent: true, alphaMap: new THREE.CanvasTexture(c), depthWrite: false}));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; floor.name = '__floor__'; floor.renderOrder = -1;
+  studio.add(floor); studio.userData.floor = floor;
+}
+{ // town ground: extends past whatever ground the embedded buildings bring
+  const g = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshStandardMaterial({color: 0x62783f, roughness: 1, metalness: 0, envMapIntensity: 0.3}));
+  g.rotation.x = -Math.PI / 2; g.position.y = -0.02; g.receiveShadow = true; g.name = '__ground__'; g.userData.fixedEnv = true; town.add(g);
+}
+
+// ---------------------------------------------------------------- state
+const S = {view: null, scene: 'studio', shading: 'lit', skeleton: false, wire: false, shadows: true, ruler: false,
+  blink: true, turntable: false, correctives: true, exposure: 0.9, env: 0.5, light: 0,
+  clip: -1, time: 0, playing: false, speed: 1, loop: true, talk: null, corrNormals: false};
+let model = null, ready = false;
+const bones = {};                  // name -> THREE.Bone (the primary skeleton; piece skeletons are rebound onto it)
+let boneList = [];
+const restQ = new Map(), restP = new Map(), restS = new Map();
+const items = [];                  // mesh nodes: {name, label, obj, meshes, ud, group, radio, tris, file}
+let groups = [];
+const charMeshes = [];             // every mesh drawn for the character (pieces included)
+const morphMeshes = [];            // meshes with morph targets: [{mesh, idx: [[i, name]]}]
+let morphNames = [];               // unique names, primary body order first
+const morphCount = {};
+const base = {}, overlay = {};     // slider / preset values and procedural overlays (blink, talk, correctives)
+let clips = [];                    // {name, clip, source, duration}
+let mixer = null, action = null, clipMorphMeshes = new Set();
+let DRIVERS = [];
+const corrNormals = [];   // {geo, i, raw, zero}: corr_* morph-normal deltas (see prepMesh)
+let VIEWS = {}, H = 1.8, K = 1, center = new THREE.Vector3(), faceC = new THREE.Vector3();
+let townBox = null, HIPS = null, charW = 1;
+const litMat = new WeakMap(), altMat = new WeakMap(), baseEnv = new WeakMap();
+const VIS = {};                    // OVR viseme code -> morph name found on the model
+let BLINK = [null, null], HEAD = null, restFootY = 0, restFootDir = {};
+const matVariants = { names: [], prims: [] };
+
+// ---------------------------------------------------------------- base64 (fast, no per-char callbacks)
+function b64decode(s) {
+  const L = new Uint8Array(128), A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  for (let i = 0; i < 64; i++) L[A.charCodeAt(i)] = i;
+  let n = s.length; while (n && (s.charCodeAt(n - 1) === 61 || s.charCodeAt(n - 1) <= 32)) n--;
+  let i0 = 0; while (i0 < n && s.charCodeAt(i0) <= 32) i0++;
+  const len = n - i0, out = new Uint8Array(Math.floor(len * 3 / 4));
+  let j = 0, i = i0;
+  for (; i + 4 <= n; i += 4) {
+    const a = L[s.charCodeAt(i)], b = L[s.charCodeAt(i + 1)], c = L[s.charCodeAt(i + 2)], d = L[s.charCodeAt(i + 3)];
+    out[j++] = (a << 2) | (b >> 4); out[j++] = ((b & 15) << 4) | (c >> 2); out[j++] = ((c & 3) << 6) | d;
+  }
+  const r = n - i;
+  if (r >= 2) { const a = L[s.charCodeAt(i)], b = L[s.charCodeAt(i + 1)]; out[j++] = (a << 2) | (b >> 4);
+    if (r === 3) { const c = L[s.charCodeAt(i + 2)]; out[j++] = ((b & 15) << 4) | (c >> 2); } }
+  return out.subarray(0, j);
+}
+
+// ---------------------------------------------------------------- loading
+// Decode embedded textures straight from the GLB bytes (as work/viewer_template3.html does): the stock loader goes
+// through blob: URLs, which a strict content-security policy blocks (textures then silently render white).
+const FILTERS = {9728: THREE.NearestFilter, 9729: THREE.LinearFilter, 9984: THREE.NearestMipmapNearestFilter,
+  9985: THREE.LinearMipmapNearestFilter, 9986: THREE.NearestMipmapLinearFilter, 9987: THREE.LinearMipmapLinearFilter};
+const WRAPS = {33071: THREE.ClampToEdgeWrapping, 33648: THREE.MirroredRepeatWrapping, 10497: THREE.RepeatWrapping};
+function decodeImage(blob) {
+  const viaDataURL = () => new Promise((res, rej) => { const fr = new FileReader();
+    fr.onload = () => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = fr.result; };
+    fr.onerror = rej; fr.readAsDataURL(blob); });
+  if (typeof createImageBitmap !== 'function') return viaDataURL();
+  return createImageBitmap(blob, {premultiplyAlpha: 'none', colorSpaceConversion: 'none', imageOrientation: 'none'})
+    .catch(() => createImageBitmap(blob)).catch(viaDataURL);
+}
+const kitImg = {};                 // shared kit textures, decoded once (see loadTexture)
+const embeddedTextures = parser => ({
+  name: 'EMBEDDED_TEXTURES',
+  loadTexture(i) {
+    const json = parser.json, td = json.textures[i], src = json.images[td.source];
+    if (!src) return null;
+    // kit pages (make_viewer.py --kit): the kit GLBs reference a shared texture folder by uri; the page embeds each
+    // shared image once (CFG.kitTex) and every GLB that points at it gets the same decoded image
+    const kt = src.bufferView === undefined && src.uri && CFG.kitTex && CFG.kitTex[src.uri.split('/').pop()];
+    if (src.bufferView === undefined && !kt) return null;
+    const pimg = kt ? (kitImg[kt.id] = kitImg[kt.id] || new Promise(r => { const t = document.getElementById(kt.id);
+        r(decodeImage(new Blob([b64decode(t.textContent)], {type: kt.mime}))); t.textContent = ''; }))
+      : parser.getDependency('bufferView', src.bufferView).then(bytes => decodeImage(new Blob([bytes], {type: src.mimeType})));
+    return pimg
+      .then(img => {
+        const tex = new THREE.Texture(img), s = (json.samplers || [])[td.sampler] || {};
+        tex.flipY = false; tex.name = src.name || '';
+        tex.magFilter = FILTERS[s.magFilter] || THREE.LinearFilter;
+        tex.minFilter = FILTERS[s.minFilter] || THREE.LinearMipmapLinearFilter;
+        tex.wrapS = WRAPS[s.wrapS] || THREE.RepeatWrapping; tex.wrapT = WRAPS[s.wrapT] || THREE.RepeatWrapping;
+        tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        tex.needsUpdate = true; return tex;
+      });
+  }
+});
+async function loadAll() {
+  const loader = new THREE.GLTFLoader(); loader.register(embeddedTextures);
+  for (const f of CFG.files) {
+    setStatus(`decoding ${f.label} (${(f.bytes / 1e6).toFixed(1)} MB)…`); await nextFrame();
+    const tag = document.getElementById(f.id);
+    const bytes = b64decode(tag.textContent); tag.textContent = '';
+    setStatus(`parsing ${f.label}…`); await nextFrame();
+    f.gltf = await new Promise((res, rej) => loader.parse(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '', res,
+      e => rej(new Error(`${f.label}: ${e && e.message || e}`))));
+  }
+  const prim = CFG.files.find(f => f.role === 'character') || CFG.files[0];
+  setupPrimary(prim);
+  for (const f of CFG.files) if (f !== prim && f.role === 'piece') attachPiece(f);
+  for (const f of CFG.files) if (f !== prim && f.role === 'context') addContext(f);
+  finishSetup();
+}
+
+function isNodeObj(parser, o) { const a = parser.associations.get(o); return !!a && a.nodes !== undefined; }
+function collectItems(gltf, file) {
+  const parser = gltf.parser, out = [];
+  gltf.scene.traverse(o => {
+    if (!isNodeObj(parser, o)) return;
+    const meshes = o.isMesh ? [o] : o.children.filter(c => c.isMesh && !isNodeObj(parser, c));
+    if (meshes.length) out.push({name: o.name, obj: o, meshes, ud: o.userData || {}, file});
+  });
+  // material variants (KHR_materials_variants)
+  const ext = parser.json.extensions && parser.json.extensions.KHR_materials_variants;
+  if (ext && ext.variants) {
+    const off = matVariants.names.length;
+    ext.variants.forEach(v => matVariants.names.push(v.name));
+    gltf.scene.traverse(o => {
+      const a = parser.associations.get(o); if (!o.isMesh || !a || a.meshes === undefined || a.primitives === undefined) return;
+      const pd = parser.json.meshes[a.meshes].primitives[a.primitives];
+      const m = pd.extensions && pd.extensions.KHR_materials_variants;
+      if (m && m.mappings) matVariants.prims.push({mesh: o, parser, orig: o.material,
+        map: m.mappings.map(mp => ({material: mp.material, variants: mp.variants.map(v => v + off)}))});
+    });
+  }
+  return out;
+}
+
+function prepMesh(o) {
+  o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false;
+  for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+    if (m.transparent) m.depthWrite = false;
+    if (m.alphaTest > 0) m.alphaToCoverage = true;
+  }
+  litMat.set(o, o.material);
+  charMeshes.push(o);
+  if (o.morphTargetDictionary && o.morphTargetInfluences) {
+    // Pose-space correctives (corr_*) are stored as rest-space deltas mapped through the inverse skinning; their NORMAL
+    // deltas are not valid after skinning (Blender recomputes normals instead) and show as shading lumps. Keep them
+    // aside; the 'Corr. normals' toggle puts the GLB's raw normal deltas back.
+    const mn = o.geometry.morphAttributes.normal;
+    if (mn) for (const [n, i] of Object.entries(o.morphTargetDictionary)) if (/^corr_/.test(n) && mn[i]) {
+      const a = mn[i].array; let nz = false; for (let k = 0; k < a.length && !nz; k++) nz = a[k] !== 0;
+      if (nz) corrNormals.push({geo: o.geometry, i, raw: mn[i], zero: new THREE.BufferAttribute(new Float32Array(a.length), mn[i].itemSize)});
+    }
+    const idx = Object.entries(o.morphTargetDictionary).sort((a, b) => a[1] - b[1]).map(([n, i]) => [i, n]);
+    morphMeshes.push({mesh: o, idx});
+    for (const [i, n] of idx) { morphCount[n] = (morphCount[n] || 0) + 1; base[n] = Math.max(base[n] || 0, o.morphTargetInfluences[i] || 0); }
+  }
+}
+
+function setupPrimary(f) {
+  const gltf = f.gltf;
+  model = gltf.scene; model.name = model.name || f.label; charRoot.add(model);
+  model.updateMatrixWorld(true);
+  model.traverse(o => { if (o.isBone && !bones[o.name]) bones[o.name] = o; });
+  items.push(...collectItems(gltf, f));
+  model.traverse(o => { if (o.isMesh) prepMesh(o); });
+  model.traverse(o => { const c = o.userData && o.userData.rts_correctives;
+    if (c) { try { const d = typeof c === 'string' ? JSON.parse(c) : c;
+      if (Array.isArray(d)) DRIVERS = d;                     // iteration 1: angle drivers on the armature extras
+      else if (d && d.method === 'cone' && Array.isArray(d.correctives))   // base pipeline (scripts/correctives.py)
+        DRIVERS = DRIVERS.concat(d.correctives.map(k => Object.assign({}, k, {morph: k.name, cone: true,
+          t: new THREE.Vector3(k.target[0], k.target[1], k.target[2]).normalize()})));
+    } catch (e) { console.warn('rts_correctives', e); } } });
+  for (const a of gltf.animations) clips.push({name: a.name || `clip ${clips.length + 1}`, clip: a, source: f.label, duration: a.duration});
+}
+
+function attachPiece(f) {
+  const gltf = f.gltf, root = gltf.scene; root.updateMatrixWorld(true);
+  const its = collectItems(gltf, f);
+  const skinned = []; root.traverse(o => { if (o.isSkinnedMesh) skinned.push(o); });
+  const missing = new Set();
+  for (const m of skinned) for (const b of m.skeleton.bones) if (!bones[b.name]) missing.add(b);
+  // bones the body does not have (cape / tabard chains): graft each missing chain onto the matching body bone
+  for (const b of missing) {
+    if (missing.has(b.parent)) continue;
+    let p = b.parent; while (p && !(p.isBone && bones[p.name])) p = p.parent;
+    const target = p ? bones[p.name] : charRoot;
+    const rel = new THREE.Matrix4().copy(p ? p.matrixWorld : root.matrixWorld).invert().multiply(b.matrixWorld);
+    target.add(b); rel.decompose(b.position, b.quaternion, b.scale);
+    b.traverse(c => { if (c.isBone && !bones[c.name]) bones[c.name] = c; });
+  }
+  for (const it of its) {    // move whole mesh nodes (a multi-primitive node is a group) onto the body
+    const node = it.obj, sk = it.meshes.filter(m => m.isSkinnedMesh);
+    if (sk.length) {
+      const bms = sk.map(m => m.bindMatrix.clone());
+      charRoot.attach(node);
+      sk.forEach((m, k) => m.bind(new THREE.Skeleton(m.skeleton.bones.map(b => bones[b.name] || b), m.skeleton.boneInverses), bms[k]));
+    } else {                 // rigid attachment (e.g. a sword under hand_r): keep its offset from the nearest body bone
+      let p = node.parent; while (p && !(p.isBone && bones[p.name])) p = p.parent;
+      if (p) { const rel = new THREE.Matrix4().copy(p.matrixWorld).invert().multiply(node.matrixWorld);
+        bones[p.name].add(node); rel.decompose(node.position, node.quaternion, node.scale); }
+      else charRoot.attach(node);
+    }
+  }
+  for (const it of its) it.meshes.forEach(prepMesh);
+  items.push(...its);
+  for (const a of gltf.animations) clips.push({name: `${a.name || 'clip'} (${f.label})`, clip: a, source: f.label, duration: a.duration});
+  if (missing.size) console.info(`${f.label}: ${missing.size} extra bones grafted`);
+}
+
+function addContext(f) {
+  const g = f.gltf.scene, pl = f.place || [0, 0, 0];
+  g.position.set(pl[0], 0, pl[1]); g.rotation.y = (pl[2] || 0) * D2R;
+  g.traverse(o => { if (!o.isMesh) return; o.castShadow = true; o.receiveShadow = true;
+    for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {   // same look as the building viewers
+      if (m.name === 'Glow') m.emissiveIntensity = 1.8;
+      else if (m.name === 'Fire') { m.emissiveIntensity = 1.15; m.toneMapped = false; }
+      else if (m.name === 'Flame') m.toneMapped = false;
+      else if (m.name === 'Gold') m.envMapIntensity = 1.3;
+      else if (m.name === 'Glass') { m.toneMapped = false; m.color.multiplyScalar(0.5); m.envMapIntensity = 0.15; }
+      else m.envMapIntensity = 0.3;
+      if (m.name.startsWith('Cloth')) o.receiveShadow = false;
+    } });
+  town.add(g); g.updateMatrixWorld(true);
+  const b = new THREE.Box3().setFromObject(g);
+  townBox = townBox ? townBox.union(b) : b;
+}
+
+// ---------------------------------------------------------------- slots / groups
+const TYPE_GROUP = {Basemesh: 'Body', Proxymeshes: 'Body', Eyes: 'Eyes', Eyebrows: 'Eyebrows', Eyelashes: 'Eyelashes',
+  Teeth: 'Mouth', Tongue: 'Mouth', Hair: 'Hair', Clothes: 'Outfit'};
+function groupOf(it) {
+  const u = it.ud;
+  const slot = u.slot || u.rts_slot || u.outfit_slot;
+  if (slot) return {name: String(slot), radio: false};
+  if (u.rts_variant_group) return {name: String(u.rts_variant_group), radio: true};
+  if (u.option_group) return {name: String(u.option_group), radio: true};
+  if (u.rts_part && (u.rts_default !== undefined || u.rts_alt !== undefined) && !u.rts_set && !u.rts_prop)   // base parts + parts_<kind>.glb styles
+    return {name: String(u.rts_part), radio: true, none: ['hair', 'beard'].includes(String(u.rts_part))};
+  if (u.rts_part) return {name: 'Outfit', radio: false};
+  const t = u.MhObjectType || u.MPFB_GEN_object_type;
+  if (t) return {name: TYPE_GROUP[t] || String(t), radio: false};
+  return {name: it.file.role === 'piece' ? it.file.label : 'Meshes', radio: false};
+}
+const GROUP_ORDER = ['Body', 'body', 'Eyes', 'eyes', 'Eyebrows', 'eyebrows', 'Eyelashes', 'eyelashes', 'Mouth', 'teeth', 'tongue', 'Hair', 'hair', 'beard'];
+function buildGroups() {
+  const map = new Map();
+  for (const it of items) {
+    const g = groupOf(it); it.group = g.name;
+    it.label = it.ud.label || it.ud.rts_asset || it.ud.rts_style || it.name;
+    it.tris = it.meshes.reduce((s, m) => s + (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3, 0);
+    if (!map.has(g.name)) map.set(g.name, {name: g.name, radio: g.radio, items: []});
+    const G = map.get(g.name); G.radio = G.radio || g.radio; G.none = G.none || !!g.none; G.items.push(it);
+  }
+  groups = [...map.values()];
+  const rank = n => { const i = GROUP_ORDER.indexOf(n); return i < 0 ? 100 : i; };
+  groups.sort((a, b) => rank(a.name) - rank(b.name));
+  for (const G of groups) if (G.radio) {      // variant groups: only the default one shows
+    const isDef = it => it.ud.rts_default === true || it.ud.rts_default === 1 || it.ud.default === true;
+    const def = G.items.find(isDef) || (G.none ? null : G.items[0]);
+    G.items.forEach(it => it.obj.visible = it === def);
+  }
+}
+
+// ---------------------------------------------------------------- looks (node extras rts_look)
+// A character can carry alternative looks, e.g. the knight: 'helm' (game: helmet + plume) and 'bare' (cutscenes:
+// head skin, hair, brows, lashes, eyes, teeth, tongue). Meshes tagged with a look sit in one wrapper group per look;
+// switching the look toggles the wrappers, so the per-piece toggles below keep working inside each look.
+const LOOKS = {names: [], groups: [], cur: null};
+function buildLooks() {
+  const names = [...new Set(items.map(it => it.ud.rts_look).filter(v => v && v !== 'any'))];
+  if (names.length < 2) return;
+  LOOKS.names = names;
+  const byKey = new Map();
+  for (const it of items) {
+    const l = it.ud.rts_look; if (!l || l === 'any' || !it.obj.parent) continue;
+    const key = l + '|' + it.obj.parent.uuid;
+    let g = byKey.get(key);
+    if (!g) { g = new THREE.Group(); g.name = '__look_' + l; g.userData.look = l; it.obj.parent.add(g); byKey.set(key, g); LOOKS.groups.push(g); }
+    g.add(it.obj); it.look = l;
+  }
+  setLook(names.includes('helm') ? 'helm' : names[0]);
+}
+function setLook(l) {
+  const n = LOOKS.names.find(x => x.toLowerCase() === String(l).toLowerCase()); if (!n) return false;
+  LOOKS.cur = n; for (const g of LOOKS.groups) g.visible = g.userData.look === n;
+  if (ui.looks) for (const [k, i] of Object.entries(ui.looks)) i.checked = k === n;
+  updateStats(); return true;
+}
+
+// ---------------------------------------------------------------- morph names
+const ARKIT = ['browDownLeft','browDownRight','browInnerUp','browOuterUpLeft','browOuterUpRight','cheekPuff','cheekSquintLeft',
+  'cheekSquintRight','eyeBlinkLeft','eyeBlinkRight','eyeLookDownLeft','eyeLookDownRight','eyeLookInLeft','eyeLookInRight',
+  'eyeLookOutLeft','eyeLookOutRight','eyeLookUpLeft','eyeLookUpRight','eyeSquintLeft','eyeSquintRight','eyeWideLeft','eyeWideRight',
+  'jawForward','jawLeft','jawOpen','jawRight','mouthClose','mouthDimpleLeft','mouthDimpleRight','mouthFrownLeft','mouthFrownRight',
+  'mouthFunnel','mouthLeft','mouthLowerDownLeft','mouthLowerDownRight','mouthPressLeft','mouthPressRight','mouthPucker','mouthRight',
+  'mouthRollLower','mouthRollUpper','mouthShrugLower','mouthShrugUpper','mouthSmileLeft','mouthSmileRight','mouthStretchLeft',
+  'mouthStretchRight','mouthUpperUpLeft','mouthUpperUpRight','noseSneerLeft','noseSneerRight','tongueOut'];
+const OVR = ['sil', 'PP', 'FF', 'TH', 'DD', 'kk', 'CH', 'SS', 'nn', 'RR', 'aa', 'E', 'ih', 'oh', 'ou'];
+const OVR_ALT = {ih: ['I', 'ih', 'i'], oh: ['O', 'oh', 'o'], ou: ['U', 'ou', 'u'], E: ['E', 'e']};
+const VIS_RE = /^(viseme_|viseme|v_|vis_)|^(sil|PP|FF|TH|DD|kk|CH|SS|nn|RR|aa|E|ih|oh|ou|I|O|U)$/;
+const SHAPE_GROUPS = [
+  ['Customise: face', n => /^cust_(head|face|forehead|brow|eye|cheek|nose|mouth|lip|jaw|chin|ear|temple|skull)/.test(n)],
+  ['Customise: body', n => /^cust_/.test(n)],
+  ['Brows', n => /^brow/i.test(n)], ['Eyes', n => /^eye/i.test(n)], ['Cheeks & nose', n => /^(cheek|nose)/i.test(n)],
+  ['Jaw', n => /^jaw/i.test(n)], ['Mouth', n => /^mouth/i.test(n)], ['Tongue', n => /^tongue/i.test(n)],
+  ['Visemes', n => VIS_RE.test(n)], ['Correctives (auto-driven)', n => /^corr?_/.test(n)], ['Other', () => true]];
+function findMorph(cands) {
+  for (const c of cands) if (morphCount[c]) return c;
+  const low = new Map(morphNames.map(n => [n.toLowerCase(), n]));
+  for (const c of cands) if (low.has(c.toLowerCase())) return low.get(c.toLowerCase());
+  return null;
+}
+function resolveFace() {
+  for (const code of OVR) {
+    const alts = OVR_ALT[code] || [code];
+    VIS[code] = findMorph(alts.flatMap(a => ['viseme_' + a, 'viseme' + a, 'v_' + a, 'vis_' + a, a]));
+  }
+  BLINK = [findMorph(['eyeBlinkLeft', 'eyeBlink_L', 'blink_l', 'Blink_Left', 'EyeBlinkLeft', 'eyesClosedLeft']),
+           findMorph(['eyeBlinkRight', 'eyeBlink_R', 'blink_r', 'Blink_Right', 'EyeBlinkRight', 'eyesClosedRight'])];
+  if (!BLINK[0] && !BLINK[1]) { const b = findMorph(['blink', 'Blink', 'eyesClosed', 'eyes_closed']); BLINK = [b, b]; }
+}
+const hasARKit = () => ARKIT.filter(n => morphCount[n]).length >= 12;
+const visemeCount = () => OVR.filter(c => VIS[c]).length;
+
+// ---------------------------------------------------------------- skeleton helpers, poses, viewer clips
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion();
+const upd = () => charRoot.updateMatrixWorld(true);
+function captureRest() {
+  boneList = Object.values(bones);
+  for (const b of boneList) { restQ.set(b, b.quaternion.clone()); restP.set(b, b.position.clone()); restS.set(b, b.scale.clone()); }
+}
+function resetPose() {
+  for (const b of boneList) { b.quaternion.copy(restQ.get(b)); b.position.copy(restP.get(b)); b.scale.copy(restS.get(b)); }
+  if (STOOL) STOOL.visible = false;        // the Sit clip's stool (POSEKIT section below)
+  upd();
+}
+function rotWorldQ(b, q) {
+  const wq = b.getWorldQuaternion(new THREE.Quaternion()), pq = b.parent.getWorldQuaternion(new THREE.Quaternion());
+  b.quaternion.copy(pq.invert().multiply(q.clone().multiply(wq))); upd();
+}
+function aim(name, child, dir) {
+  const b = bones[name], c = bones[child]; if (!b || !c) return; upd();
+  const d = c.getWorldPosition(_v2).sub(b.getWorldPosition(_v1)).normalize();
+  rotWorldQ(b, new THREE.Quaternion().setFromUnitVectors(d, dir));
+}
+function rotW(name, axis, deg) { const b = bones[name]; if (!b) return; upd(); rotWorldQ(b, new THREE.Quaternion().setFromAxisAngle(axis, deg * D2R)); }
+function localRot(name, axis, deg) { const b = bones[name]; if (b) { b.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis, deg * D2R)); upd(); } }
+const SIDES = ['_l', '_r'], sg = s => s === '_l' ? 1 : -1;       // glTF: +Y up, the character faces +Z, +X is its left
+const clavUp = (s, deg) => rotW('clavicle' + s, Z, sg(s) * deg);
+/*POSEKIT_BEGIN*/
+// ---- POSEKIT: pose table + foot-ground contact solver, IDENTICAL in viewer/char_viewer_template.html and
+// viewer/lookdev_template.html (scripts/pose_qa.py checks the two blocks are equal and runs the same algorithm in
+// Blender from the table below: plan POSES_HANDS_PLAN.md sections 4-5). Character frame: +Y up, faces +Z, +X = its left.
+// Foot modes: flat | heel_up (heel raised about a virtual MTP crease pivot, toes flat: the ball bone gets a pivot
+// translation so the toes bend at the crease, not at the rig's mid-foot joint) | heel (heel strike) | swing | free.
+// Legs: two-bone IK with the knee in the foot's vertical plane (knees over the 2nd toe), the rest knee hinge kept;
+// pelvis / trunk solved per pose type; then a skin fit puts every planted foot's lowest sampled vertex at +0.5 mm.
+const POSEKIT = (() => {
+const TABLE = /*POSE_TABLE_BEGIN*/{"version": 1,
+ "consts": {"foot_y": 0.1, "samp_bins": 10, "samp_n": 10, "mtp_frac": 0.72, "mtp_h": 0.0153, "heel_frac": 0.1, "knee_r": 0.075, "clear": 0.0005, "fit_iters": 3, "blend_fit_iters": 1, "stool_front": 0.12, "kneel_h0": 0.06, "kneel_iters": 4, "spine_w": [["spine_01", 0.4], ["spine_02", 0.35], ["spine_03", 0.25]], "look_w": [["neck_01", 0.4], ["neck_02", 0.3], ["head", 0.3]]},
+ "lists": {
+  "char": ["A pose", "T pose", "Arms down", "Arms up", "Arms up 180", "Reach up", "Behind back", "Cross reach", "Squat", "Deep squat", "Lunge", "Kneel", "Sit", "High kick", "Fists"],
+  "lookdev": [["T pose", "T pose"], ["Arms up", "Arms up +clav"], ["Arms forward", "Arms forward"], ["Squat", "Squat"], ["Deep squat", "Deep squat"], ["Lunge", "Lunge"], ["Kneel", "Kneel"], ["Sit", "Sit"], ["High kick", "High kick"], ["Fists", "Fists"], ["Torso twist", "Torso twist"], ["Head turn", "Head turn"], ["Look down", "Look down"], ["Shrug", "Shrug"]]},
+ "poses": {
+  "A pose": {"ops": []},
+  "T pose": {"ops": [["aimS", "upperarm", "lowerarm", [1, 0, 0]], ["aimS", "lowerarm", "hand", [1, 0, 0]]]},
+  "Arms down": {"ops": [["aimS", "upperarm", "lowerarm", [0.12, -1, -0.02]], ["aimS", "lowerarm", "hand", [0.05, -1, 0.12]]]},
+  "Arms up": {"ops": [["aimS", "upperarm", "lowerarm", [0.22, 1, -0.05]], ["aimS", "lowerarm", "hand", [0.12, 1, -0.05]]]},
+  "Arms up +clav": {"ops": [["rotWS", "clavicle", [0, 0, 1], 18], ["aimS", "upperarm", "lowerarm", [0.22, 1, -0.05]], ["aimS", "lowerarm", "hand", [0.12, 1, -0.05]]]},
+  "Arms up 180": {"ops": [["aimS", "upperarm", "lowerarm", [0.04, 1, -0.03]], ["aimS", "lowerarm", "hand", [0, 1, -0.03]]]},
+  "Reach up": {"ops": [["rotWS", "clavicle", [0, 0, 1], 8], ["aimS", "upperarm", "lowerarm", [0.14, 0.68, 0.72]], ["aimS", "lowerarm", "hand", [0.08, 0.8, 0.6]]]},
+  "Behind back": {"ops": [["aimS", "upperarm", "lowerarm", [0.3, -0.86, -0.42]], ["aimS", "lowerarm", "hand", [-0.85, 0.28, -0.45]]]},
+  "Cross reach": {"ops": [["rotW", "clavicle_l", [0, 1, 0], 12], ["aim", "upperarm_l", "lowerarm_l", [-0.5, 0.12, 0.85]], ["aim", "lowerarm_l", "hand_l", [-0.75, 0.2, 0.6]], ["aim", "upperarm_r", "lowerarm_r", [-0.12, -1, -0.02]], ["aim", "lowerarm_r", "hand_r", [-0.05, -1, 0.12]]]},
+  "Arms forward": {"ops": [["rotWS", "clavicle", [0, 0, 1], 4], ["aimS", "upperarm", "lowerarm", [0.14, -0.02, 1]], ["aimS", "lowerarm", "hand", [0.06, 0.04, 1]]]},
+  "Fists": {"ops": [["aimS", "upperarm", "lowerarm", [0.3, -0.75, 0.6]], ["aimS", "lowerarm", "hand", [0.1, 0.5, 1]], ["hands", "fist"]]},
+  "Torso twist": {"ops": [["rotW", "spine_02", [0, 1, 0], 10], ["rotW", "spine_03", [0, 1, 0], 12], ["rotW", "spine_04", [0, 1, 0], 12], ["rotW", "spine_05", [0, 1, 0], 6]]},
+  "Head turn": {"ops": [["rotW", "neck_01", [0, 1, 0], 18], ["rotW", "neck_02", [0, 1, 0], 12], ["rotW", "head", [0, 1, 0], 22], ["rotW", "head", [0, 0, 1], -8]]},
+  "Look down": {"ops": [["rotW", "neck_01", [1, 0, 0], 14], ["rotW", "neck_02", [1, 0, 0], 10], ["rotW", "head", [1, 0, 0], 16]]},
+  "Shrug": {"ops": [["rotWS", "clavicle", [0, 0, 1], 24]]},
+  "Squat": {"note": "parallel squat: feet flat, 22 deg out, heel width solved so the thighs run along the feet (knees over the 2nd toe, thighs <= 8 deg wider), thighs horizontal, trunk parallel to the shin, shin tilt solved for the CoM over 50 % of the foot (Myer 2014, Straub & Powers 2024)", "legs": {"type": "squat", "stance": "align", "yaw": 22, "beta": "balance", "trunk": "shin", "pelvis_tilt": 12, "look": 12, "align_deg": -8, "stance_range": [0.85, 1.3], "thigh": "horizontal", "com": 0.5}, "ops": [["aimS", "upperarm", "lowerarm", [0.15, -0.1, 1]], ["aimS", "lowerarm", "hand", [0, 0.1, 1]]]},
+  "Deep squat": {"note": "heels-down deep squat: shin 35 deg forward (DF), knee 145, feet 28 deg out, heel width solved for thigh / foot alignment, trunk solved for the CoM over 45 % of the foot, 5 deg posterior pelvic tilt (Hemmerich 2006, Endo 2020)", "legs": {"type": "squat", "stance": "align", "yaw": 28, "beta": 35, "knee": 145, "trunk": "balance", "com": 0.45, "pelvis_tilt": -5, "look": 15, "align_deg": -8, "stance_range": [0.85, 1.3]}, "ops": [["aimS", "upperarm", "lowerarm", [0.2, 0, 1]], ["aimS", "lowerarm", "hand", [0, 0.15, 1]]]},
+  "Lunge": {"note": "forward lunge at the bottom: front shin 10 deg forward, rear heel up with the toes flat (MTP extension 50), rear hip extended 10, rear knee joint 4.7 % of stature above the floor, trunk 5 (Hofmann 2017)", "legs": {"type": "split", "front": "_l", "width": 1.0, "front_beta": 10, "front_yaw": 5, "rear_yaw": 5, "rear_mtp": 50, "rear_hip_ext": 10, "rear_knee_h": 0.047, "trunk": "balance", "look": 5, "trunk_range": [-3, 12]}, "ops": [["aimS", "upperarm", "lowerarm", [0.25, -1, 0.08]], ["aimS", "lowerarm", "hand", [0.12, -1, 0.3]]]},
+  "Kneel": {"note": "kneeling on the rear knee (patella on the floor), rear toes tucked (MTP extension 60), front foot flat with the shin 5 deg forward, trunk upright", "legs": {"type": "split", "front": "_l", "width": 1.0, "front_beta": 5, "front_yaw": 5, "rear_yaw": 3, "rear_mtp": 58, "rear_hip_ext": 0, "rear_knee_h": "contact", "trunk": "balance", "look": 3, "trunk_range": [-3, 8]}, "ops": [["aimS", "upperarm", "lowerarm", [0.2, -1, 0.1]], ["aimS", "lowerarm", "hand", [0.1, -1, 0.35]]]},
+  "Sit": {"note": "seated on a stool (drawn under the buttocks): knees 90, shins vertical, feet flat hip-width, 8 deg out, trunk 4 forward", "legs": {"type": "squat", "stance": "rest", "yaw": 8, "beta": 0, "knee": 90, "trunk": 4, "pelvis_tilt": 0, "stool": true, "look": 4}, "ops": [["aimS", "upperarm", "lowerarm", [0.12, -0.93, 0.35]], ["aimS", "lowerarm", "hand", [0.02, -0.25, 1]]]},
+  "High kick": {"note": "front kick on the right leg: standing heel under the hip, knee 10, trunk leaning 22 deg over the standing leg and 8 back (posterior pelvic tilt), pelvis shifted until the CoM is over the standing foot, kick foot free and plantarflexed", "legs": {"type": "single", "stand": "_r", "knee": 10, "com": 0.45, "pelvis_tilt": -8, "stand_width": 1.0}, "ops": [["rotW", "spine_01", [0, 0, 1], 14], ["rotW", "spine_03", [0, 0, 1], 8], ["aim", "thigh_l", "calf_l", [0.1, 0.65, 0.75]], ["aim", "calf_l", "foot_l", [0.08, 0.71, 0.7]], ["aim", "foot_l", "ball_l", [0.05, 0.83, 0.55]], ["aimS", "upperarm", "lowerarm", [0.45, -0.84, 0.3]], ["aimS", "lowerarm", "hand", [0.45, -0.84, 0.3]]]}
+ },
+ "walk": {"period": 1.1, "fps": 30, "duty": 0.62, "step": 0.26, "phase0": 0.0, "turnout": 7, "ahead": 0.0, "flat_at": 0.1, "heel_off": 0.32, "heel_pitch": 12, "mtp_toe_off": 40, "lift": 0.045, "lift_skew": 0.6, "pitch_end": 0.9, "mtp_relax": 0.6, "arm": 16, "elbow": 18, "elbow_fwd": 14, "sway": 0.008, "drop": 0.014, "bob": 0.013, "yaw": 4, "twist": 7, "lean": 4}}/*POSE_TABLE_END*/;
+const C = TABLE.consts, S2 = ['_l', '_r'], UP = [0, 1, 0], XA = [1, 0, 0], I4 = [0, 0, 0, 1], EPS = 2.220446049250313e-16;
+const sg = s => s === '_l' ? 1 : -1, other = s => s === '_l' ? '_r' : '_l';
+// ---- math (three.js conventions, quaternion [x, y, z, w]); scripts/pose_qa.py has the same functions
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const len = a => Math.sqrt(dot(a, a)), nrm = a => { const n = len(a); return n > 0 ? mul(a, 1 / n) : a.slice(); };
+const lerp = (a, b, t) => add(a, mul(sub(b, a), t)), D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const smooth = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+const angle = (a, b) => Math.acos(Math.max(-1, Math.min(1, dot(a, b) / Math.max(1e-12, Math.sqrt(dot(a, a) * dot(b, b)))))) * R2D;
+function qmul(a, b) {
+  const [ax, ay, az, aw] = a, [bx, by, bz, bw] = b;
+  return [ax * bw + aw * bx + ay * bz - az * by, ay * bw + aw * by + az * bx - ax * bz, az * bw + aw * bz + ax * by - ay * bx, aw * bw - ax * bx - ay * by - az * bz];
+}
+const qinv = q => [-q[0], -q[1], -q[2], q[3]];
+function qrot(q, v) {
+  const [x, y, z, w] = q, [vx, vy, vz] = v;
+  const ix = w * vx + y * vz - z * vy, iy = w * vy + z * vx - x * vz, iz = w * vz + x * vy - y * vx, iw = -x * vx - y * vy - z * vz;
+  return [ix * w + iw * -x + iy * -z - iz * -y, iy * w + iw * -y + iz * -x - ix * -z, iz * w + iw * -z + ix * -y - iy * -x];
+}
+function qaxis(axis, deg) { const a = nrm(axis), h = deg * D2R / 2, s = Math.sin(h); return [a[0] * s, a[1] * s, a[2] * s, Math.cos(h)]; }
+function qunit(a, b) {
+  let r = dot(a, b) + 1, q;
+  if (r < EPS) { r = 0; q = Math.abs(a[0]) > Math.abs(a[2]) ? [-a[1], a[0], 0, r] : [0, -a[2], a[1], r]; }
+  else q = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0], r];
+  const n = Math.sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]); return q.map(x => x / n);
+}
+function qslerp(a, b, t) {
+  if (t === 0) return a.slice(); if (t === 1) return b.slice();
+  const [x, y, z, w] = a; let [bx, by, bz, bw] = b, c = w * bw + x * bx + y * by + z * bz;
+  if (c < 0) { bx = -bx; by = -by; bz = -bz; bw = -bw; c = -c; }
+  if (c >= 1) return a.slice();
+  const ss = 1 - c * c;
+  if (ss <= EPS) { const s = 1 - t, q = [s * x + t * bx, s * y + t * by, s * z + t * bz, s * w + t * bw], n = Math.hypot(...q); return q.map(v => v / n); }
+  const sh = Math.sqrt(ss), h = Math.atan2(sh, c), ra = Math.sin((1 - t) * h) / sh, rb = Math.sin(t * h) / sh;
+  return [x * ra + bx * rb, y * ra + by * rb, z * ra + bz * rb, w * ra + bw * rb];
+}
+function qmat(m) {   // rows
+  const [[m11, m12, m13], [m21, m22, m23], [m31, m32, m33]] = m, tr = m11 + m22 + m33;
+  if (tr > 0) { const s = 0.5 / Math.sqrt(tr + 1); return [(m32 - m23) * s, (m13 - m31) * s, (m21 - m12) * s, 0.25 / s]; }
+  if (m11 > m22 && m11 > m33) { const s = 2 * Math.sqrt(1 + m11 - m22 - m33); return [0.25 * s, (m12 + m21) / s, (m13 + m31) / s, (m32 - m23) / s]; }
+  if (m22 > m33) { const s = 2 * Math.sqrt(1 + m22 - m11 - m33); return [(m12 + m21) / s, 0.25 * s, (m23 + m32) / s, (m13 - m31) / s]; }
+  const s = 2 * Math.sqrt(1 + m33 - m11 - m22); return [(m13 + m31) / s, (m23 + m32) / s, 0.25 * s, (m21 - m12) / s];
+}
+function qframe(u, n) { const z = cross(n, u); return qmat([[n[0], u[0], z[0]], [n[1], u[1], z[1]], [n[2], u[2], z[2]]]); }
+const mirrorDir = (d, s) => [d[0] * sg(s), d[1], d[2]], mirrorAxis = (a, s) => s === '_l' ? a.slice() : [a[0], -a[1], -a[2]];
+
+// ---- virtual skeleton over the page's bones (character frame = env.root's local frame)
+function Skel(env) {
+  const B = env.bones, names = Object.keys(B), parent = {};
+  for (const n of names) { const pb = B[n].parent; parent[n] = pb && pb.isBone && B[pb.name] === pb ? pb.name : null; }
+  const sk = {names, parent, q: {}, p: {}, w: {}, base: {}};
+  sk.read = () => {             // locals from the bones (after the page's resetPose), base = root-bone parent in the character frame
+    env.root.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(env.root.matrixWorld).invert(), m = new THREE.Matrix4(), pp = new THREE.Vector3(), qq = new THREE.Quaternion(), ss = new THREE.Vector3();
+    for (const n of names) {
+      const b = B[n]; sk.q[n] = [b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w]; sk.p[n] = [b.position.x, b.position.y, b.position.z];
+      if (parent[n] === null) { m.multiplyMatrices(inv, b.parent.matrixWorld); m.decompose(pp, qq, ss); sk.base[n] = [[qq.x, qq.y, qq.z, qq.w], [pp.x, pp.y, pp.z]]; }
+    }
+    sk.w = {};
+  };
+  sk.world = n => {
+    let w = sk.w[n]; if (w) return w;
+    const par = parent[n];
+    if (par === null) { const [bq, bt] = sk.base[n]; w = [qmul(bq, sk.q[n]), add(bt, qrot(bq, sk.p[n]))]; }
+    else { const [pq, pt] = sk.world(par); w = [qmul(pq, sk.q[n]), add(pt, qrot(pq, sk.p[n]))]; }
+    return (sk.w[n] = w);
+  };
+  sk.wpos = n => sk.world(n)[1]; sk.wquat = n => sk.world(n)[0]; sk.has = n => n in B;
+  const pw = n => parent[n] === null ? sk.base[n] : sk.world(parent[n]);
+  sk.setWorldQ = (n, q) => { sk.q[n] = qmul(qinv(pw(n)[0]), q); sk.w = {}; };
+  sk.setWorld = (n, pos, q) => { const [pq, pt] = pw(n), iq = qinv(pq); sk.q[n] = qmul(iq, q); sk.p[n] = qrot(iq, sub(pos, pt)); sk.w = {}; };
+  sk.localRot = (n, q) => { sk.q[n] = qmul(sk.q[n], q); sk.w = {}; };
+  sk.flush = () => {           // write the locals into the bones (and let the page's own code see them)
+    for (const n of names) { const b = B[n], q = sk.q[n], p = sk.p[n]; b.quaternion.set(q[0], q[1], q[2], q[3]); b.position.set(p[0], p[1], p[2]); }
+    env.root.updateMatrixWorld(true);
+  };
+  return sk;
+}
+
+function make(env) {
+  const sk = Skel(env), B = env.bones, kit = {TABLE, cache: {}, rest: null};
+  const meshes = []; env.root.traverse(o => { if (o.isSkinnedMesh) meshes.push(o); });
+  const body = meshes.find(m => /_body$/.test(m.name)) || meshes[0];
+  const _v = new THREE.Vector3(), _m = new THREE.Matrix4();
+  // one vertex in the character frame: raw + morph deltas, optionally skinned (three r147 boneTransform ignores morphs)
+  function vtx(mesh, i, skinned) {
+    const pos = mesh.geometry.attributes.position; _v.fromBufferAttribute(pos, i);
+    const ma = mesh.geometry.morphAttributes.position, inf = mesh.morphTargetInfluences;
+    if (ma && inf) for (let k = 0; k < inf.length; k++) if (inf[k] && ma[k]) { _v.x += ma[k].getX(i) * inf[k]; _v.y += ma[k].getY(i) * inf[k]; _v.z += ma[k].getZ(i) * inf[k]; }
+    if (skinned) mesh.boneTransform(i, _v);
+    _v.applyMatrix4(mesh.matrixWorld).applyMatrix4(_m);
+    return [_v.x, _v.y, _v.z];
+  }
+  const posed = list => list.map(([mesh, i]) => vtx(mesh, i, true));
+  function sampleY(list) { let mn = Infinity; for (const p of posed(list)) mn = Math.min(mn, p[1]); return mn; }
+
+  // ---- rest data (from the page's rest pose: call env.reset() first)
+  function restData() {
+    env.reset(); sk.read(); _m.copy(env.root.matrixWorld).invert();
+    const R = {}, W = sk.wpos;
+    R.P0 = W('pelvis').slice(); R.PQ0 = sk.wquat('pelvis').slice();
+    R.SHW = len(sub(W('upperarm_l'), W('upperarm_r'))); R.HIPW = len(sub(W('thigh_l'), W('thigh_r')));
+    R.restQ = {}; for (const n of sk.names) R.restQ[n] = sk.wquat(n).slice();
+    // candidate vertices (rest, character frame) of every skinned mesh: feet, knees, buttocks
+    let top = -Infinity; const cand = [];
+    const hipy = 0.5 * (W('thigh_l')[1] + W('thigh_r')[1]), kp = {_l: W('calf_l'), _r: W('calf_r')};
+    const BUT = new Set(['pelvis', 'thigh_l', 'thigh_r', 'thigh_twist_01_l', 'thigh_twist_01_r']);
+    for (const mesh of meshes) {
+      const pos = mesh.geometry.attributes.position, si = mesh.geometry.attributes.skinIndex, sw = mesh.geometry.attributes.skinWeight;
+      for (let i = 0; i < pos.count; i++) {
+        _v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld).applyMatrix4(_m);
+        if (mesh === body && _v.y > top) top = _v.y;
+        if (_v.y < C.foot_y + 0.02 || _v.distanceTo(new THREE.Vector3(...kp._l)) < C.knee_r + 0.02 || _v.distanceTo(new THREE.Vector3(...kp._r)) < C.knee_r + 0.02 ||
+            (_v.y > hipy - 0.27 && _v.y < hipy + 0.07)) {
+          const p = vtx(mesh, i, false);
+          const ws = [sw.getX(i), sw.getY(i), sw.getZ(i), sw.getW(i)], is = [si.getX(i), si.getY(i), si.getZ(i), si.getW(i)];   // (r147: no getComponent)
+          let bi = 0, bw = -1; for (let k = 0; k < 4; k++) if (ws[k] > bw) { bw = ws[k]; bi = is[k]; }
+          cand.push({mesh, i, p, dom: mesh.skeleton.bones[bi] ? mesh.skeleton.bones[bi].name : ''});
+        }
+      }
+    }
+    R.stature = top; R.head0 = W('head').slice(); R.headTop0 = [R.head0[0], top, R.head0[2]];
+    R.F = {};
+    for (const s of S2) {
+      const d = {};
+      for (const b of ['thigh', 'calf', 'foot', 'ball']) { d[b + '_p'] = W(b + s).slice(); d[b + '_q'] = sk.wquat(b + s).slice(); }
+      d.L1 = len(sub(d.calf_p, d.thigh_p)); d.L2 = len(sub(d.foot_p, d.calf_p));
+      // dedupe by position (the GLB splits vertices at UV seams)
+      const seen = new Set(), P = [];
+      for (const c of cand) if (c.p[1] < C.foot_y && c.p[0] * sg(s) > 0.01) {
+        const key = c.p.map(x => Math.round(x * 1e5)).join(','); if (seen.has(key)) continue; seen.add(key); P.push(c);
+      }
+      let hb = P[0].p; for (const c of P) if (c.p[2] < hb[2]) hb = c.p;
+      const bdir = qrot(d.ball_q, UP); let mx = -Infinity; for (const c of P) mx = Math.max(mx, dot(sub(c.p, d.ball_p), bdir));
+      const tip = add(d.ball_p, mul(bdir, mx)), f0 = nrm([tip[0] - hb[0], 0, tip[2] - hb[2]]);
+      let FL = -Infinity; for (const c of P) FL = Math.max(FL, dot(sub(c.p, hb), f0));
+      Object.assign(d, {hb, hbf: [hb[0], 0, hb[2]], f0, FL, toe2: tip, side0: nrm(cross(UP, f0)), turnout0: Math.atan2(f0[0] * sg(s), f0[2]) * R2D});
+      d.pmtp = add(add(d.hbf, mul(f0, C.mtp_frac * FL)), mul(UP, C.mtp_h * top));
+      d.pheel = add(d.hbf, mul(f0, C.heel_frac * FL));
+      // samples: the lowest samp_n per bin along the foot + the samp_n rearmost (identical rule in pose_qa.py)
+      const fr = c => dot(sub(c.p, hb), f0) / FL, bins = {};
+      for (const c of P) { const b = Math.min(C.samp_bins - 1, Math.max(0, Math.floor(fr(c) * C.samp_bins))); (bins[b] = bins[b] || []).push(c); }
+      const chosen = new Set();
+      for (const b in bins) bins[b].sort((a, c) => a.p[1] - c.p[1]).slice(0, C.samp_n).forEach(c => chosen.add(c));
+      P.slice().sort((a, c) => fr(a) - fr(c)).slice(0, C.samp_n).forEach(c => chosen.add(c));
+      d.samples = [...chosen].map(c => [c.mesh, c.i]);
+      d.knee = cand.filter(c => len(sub(c.p, d.calf_p)) < C.knee_r && c.p[2] > d.calf_p[2]).map(c => [c.mesh, c.i]);
+      R.F[s] = d;
+    }
+    R.butt = cand.filter(c => BUT.has(c.dom) && c.p[1] > hipy - 0.25 && c.p[1] < hipy + 0.05).map(c => [c.mesh, c.i]);
+    kit.rest = R; kit.cache = {};
+    return R;
+  }
+  const RD = () => kit.rest || restData();
+
+  // ---- ops
+  function rotW(n, axis, deg) { if (sk.has(n)) sk.setWorldQ(n, qmul(qaxis(axis, deg), sk.wquat(n))); }
+  function aim(n, child, d, w) {
+    if (!(sk.has(n) && sk.has(child))) return;
+    let q = qunit(nrm(sub(sk.wpos(child), sk.wpos(n))), nrm(d)); if (w !== 1) q = qslerp(I4, q, w);
+    sk.setWorldQ(n, qmul(q, sk.wquat(n)));
+  }
+  const handsDone = [];
+  function runOps(ops, w) {
+    for (const op of ops) {
+      const k = op[0];
+      if (k === 'aim') aim(op[1], op[2], op[3], w);
+      else if (k === 'aimS') S2.forEach(s => aim(op[1] + s, op[2] + s, mirrorDir(op[3], s), w));
+      else if (k === 'rotW') rotW(op[1], op[2], op[3] * w);
+      else if (k === 'rotWS') S2.forEach(s => rotW(op[1] + s, mirrorAxis(op[2], s), op[3] * w));
+      else if (k === 'localRot') { if (sk.has(op[1])) sk.localRot(op[1], qaxis(op[2], op[3] * w)); }
+      else if (k === 'hands') S2.forEach(s => { if (env.hands && env.hands.available(op[1])) handsDone.push([s, op[1], w]); else legacyHand(s, op[1], w); });
+    }
+  }
+  function legacyHand(s, preset, w) {     // the viewers' old Fists curl (local X): fallback without viewer/hand_poses.js
+    if (preset !== 'fist' && preset !== 'fist_legacy') return;
+    for (const f of ['index', 'middle', 'ring', 'pinky']) for (const [i, a] of [[1, 75], [2, 82], [3, 60]]) if (sk.has(`${f}_0${i}${s}`)) sk.localRot(`${f}_0${i}${s}`, qaxis(XA, a * w));
+    for (const [i, a] of [[2, 45], [3, 45]]) if (sk.has(`thumb_0${i}${s}`)) sk.localRot(`thumb_0${i}${s}`, qaxis(XA, a * w));
+  }
+
+  // ---- foot placement G = T(pos) Yaw(yaw) T(-heel back on the floor); mode rotation about its pivot in the rest frame
+  function placeXf(s, pl) {
+    const F = RD().F[s], qG = qaxis(UP, pl.yaw);
+    const pos = pl.mode === 'swing' ? sub(pl.ankle, qrot(qG, sub(F.foot_p, F.hbf))) : pl.pos;
+    const G = X => add(pos, qrot(qG, sub(X, F.hbf)));
+    const ang = pl.ang || 0;
+    let qm = I4.slice(), piv = F.foot_p;
+    if (pl.mode === 'heel_up') { qm = qaxis(F.side0, ang); piv = F.pmtp; }
+    else if (pl.mode === 'heel') { qm = qaxis(F.side0, -ang); piv = F.pheel; }
+    else if (pl.mode === 'swing') { qm = qaxis(F.side0, ang); piv = F.foot_p; }
+    const M = X => add(piv, qrot(qm, sub(X, piv)));
+    return {qG, G, qm, M};
+  }
+  function footTargets(s, pl) {
+    const F = RD().F[s], x = placeXf(s, pl);
+    return Object.assign(x, {At: x.G(x.M(F.foot_p)), qf: qmul(x.qG, qmul(x.qm, F.foot_q))});
+  }
+  function legIK(s, At, Q, m, fwd) {
+    const F = RD().F[s], H = sk.wpos('thigh' + s), L1 = F.L1, L2 = F.L2, D = sub(At, H);
+    let d = len(D); const short = Math.max(0, d - (L1 + L2) * 0.99999);
+    d = Math.min(Math.max(d, Math.abs(L1 - L2) + 1e-6), (L1 + L2) * 0.99999);
+    const u = mul(D, 1 / Math.max(1e-12, len(D))), a = (L1 * L1 - L2 * L2 + d * d) / (2 * d), r = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+    const Cc = add(H, mul(u, a)), e1 = nrm(Math.abs(u[0]) < 0.9 ? cross(u, XA) : cross(u, UP)), e2 = cross(u, e1);
+    const g1 = dot(e1, m), g2 = dot(e2, m), R0 = r * Math.sqrt(g1 * g1 + g2 * g2), rhs = -dot(sub(Cc, Q), m), ph0 = Math.atan2(g2, g1);
+    const cands = R0 > 1e-9 && Math.abs(rhs) <= R0 ? [ph0 + Math.acos(rhs / R0), ph0 - Math.acos(rhs / R0)] : [rhs > 0 ? ph0 : ph0 + Math.PI];
+    let K = null, bestv = -1e9;
+    for (const ph of cands) { const k = add(Cc, add(mul(e1, r * Math.cos(ph)), mul(e2, r * Math.sin(ph)))), v = dot(sub(k, H), fwd); if (v > bestv) { K = k; bestv = v; } }
+    const At2 = add(H, mul(u, d));
+    let n = cross(sub(At2, H), sub(K, H)); if (dot(n, n) < 1e-14) n = mul(cross(UP, fwd), -1); n = nrm(n);
+    const ut = nrm(sub(K, H)), uc = nrm(sub(At2, K)), u0t = nrm(sub(F.calf_p, F.thigh_p)), u0c = nrm(sub(F.foot_p, F.calf_p)), n0 = [-1, 0, 0];
+    const orth = (v, a) => nrm(sub(v, mul(a, dot(v, a))));
+    const Qt = qmul(qframe(ut, orth(n, ut)), qinv(qframe(u0t, orth(n0, u0t)))), Qc = qmul(qframe(uc, orth(n, uc)), qinv(qframe(u0c, orth(n0, u0c))));
+    sk.setWorldQ('thigh' + s, qmul(Qt, F.thigh_q)); sk.setWorldQ('calf' + s, qmul(Qc, F.calf_q));
+    return short;
+  }
+  function poseLeg(s, pl) {
+    const F = RD().F[s], t = footTargets(s, pl);
+    const At = pl.mode === 'swing' ? pl.ankle : t.At, Q = pl.mode === 'swing' ? At : t.G(F.hbf);
+    const short = legIK(s, At, Q, qrot(t.qG, F.side0), qrot(t.qG, F.f0));
+    sk.setWorldQ('foot' + s, t.qf);
+    const e = pl.mtp !== undefined ? pl.mtp : (pl.mode === 'heel_up' ? pl.ang : 0);
+    if (e && sk.has('ball' + s)) {     // toe world = foot world * foot_rest^-1 * Rot_about(P_mtp, side0, -e) * toe_rest
+      const [qfw, tfw] = sk.world('foot' + s), qe = qaxis(F.side0, -e);
+      const pRest = add(F.pmtp, qrot(qe, sub(F.ball_p, F.pmtp))), relQ = qmul(qfw, qinv(F.foot_q));
+      sk.setWorld('ball' + s, add(tfw, qrot(relQ, sub(pRest, F.foot_p))), qmul(relQ, qmul(qe, F.ball_q)));
+    }
+    return short;
+  }
+  const setPelvis = (P, dq) => sk.setWorld('pelvis', P, qmul(dq, RD().PQ0));
+  let pls = {};
+  function legsAll(P, dq) {
+    for (let it = 0; it < 4; it++) {
+      let short = 0; for (const s in pls) short = Math.max(short, poseLeg(s, pls[s]));
+      if (short <= 1e-6) break;
+      P = sub(P, [0, short + 0.002, 0]); setPelvis(P, dq);
+    }
+    return P;
+  }
+  // ---- realize a solution at weight w (0 = rest, 1 = the solved pose); fit = skin-fit iterations (0 = none)
+  function realize(sol, w, fit) {
+    const R = RD(); env.reset(); sk.read(); handsDone.length = 0;
+    let P = lerp(R.P0, sol.P, w); const dq = qslerp(I4, sol.dqP, w);
+    setPelvis(P, dq);
+    for (const [b, ax, deg] of sol.spine || []) rotW(b, ax, deg * w);
+    runOps(sol.ops || [], w);
+    pls = {};
+    for (const s in sol.feet || {}) {
+      const pl = sol.feet[s]; if (pl.mode === 'free') continue;
+      const q = Object.assign({}, pl);
+      if (pl.mode !== 'swing') { q.pos = lerp(R.F[s].hbf, pl.pos, w); q.yaw = pl.yaw * w; q.ang = (pl.ang || 0) * w; if (pl.mtp !== undefined) q.mtp = pl.mtp * w; }
+      pls[s] = q;
+    }
+    P = legsAll(P, dq);
+    const nfit = Object.keys(pls).length ? fit : 0;
+    for (let it = 0; it < nfit; it++) {
+      flushAll();
+      for (const s in pls) if (pls[s].mode !== 'swing') pls[s].pos = sub(pls[s].pos, [0, sampleY(R.F[s].samples) - C.clear, 0]);
+      P = legsAll(P, dq);
+    }
+    kit.P = P;
+    return P;
+  }
+  function flushAll() {   // bones <- virtual skeleton, hands, correctives (so the skin samples see the full pose)
+    sk.flush();
+    for (const [s, preset, w] of handsDone) env.hands.apply(s, preset, w);     // viewer/hand_poses.js (HANDS builder)
+    if (env.correctives) env.correctives();
+    _m.copy(env.root.matrixWorld).invert();
+  }
+  // ---- measurements for the solves (joints only)
+  function legState(s) {
+    const H = sk.wpos('thigh' + s), K = sk.wpos('calf' + s), A = sk.wpos('foot' + s), pl = pls[s];
+    const fwd = pl ? qrot(qaxis(UP, pl.yaw), RD().F[s].f0) : [0, 0, 1], sh = sub(K, A);
+    return {H, K, A, beta: Math.atan2(dot(sh, fwd), dot(sh, UP)) * R2D, kappa: angle(sub(K, H), sub(A, K)), thighEl: K[1] - H[1]};
+  }
+  const trunkLean = () => { const t = sub(sk.wpos('neck_01'), sk.wpos('pelvis')); return Math.atan2(t[2], t[1]) * R2D; };
+  function footPoint(s, X) { const F = RD().F[s], [qf, tf] = sk.world('foot' + s); return add(tf, qrot(qmul(qf, qinv(F.foot_q)), sub(X, F.foot_p))); }
+  function comSeg() {        // Winter 2009 segment masses from the joints (pose_qa.py com_seg)
+    const R = RD(), W = sk.wpos, hipc = mul(add(W('thigh_l'), W('thigh_r')), 0.5), shc = mul(add(W('upperarm_l'), W('upperarm_r')), 0.5);
+    let tot = mul(mul(add(hipc, shc), 0.5), 0.497);
+    const [qh, th] = sk.world('head');
+    tot = add(tot, mul(add(th, qrot(qmul(qh, qinv(R.restQ.head)), mul(sub(R.headTop0, R.head0), 0.45))), 0.081));
+    for (const s of S2) {
+      const F = R.F[s];
+      tot = add(tot, mul(lerp(W('upperarm' + s), W('lowerarm' + s), 0.436), 0.028));
+      tot = add(tot, mul(lerp(W('lowerarm' + s), W('hand' + s), 0.430), 0.016));
+      tot = add(tot, mul(lerp(W('hand' + s), W('middle_01' + s), 0.6), 0.006));
+      tot = add(tot, mul(lerp(W('thigh' + s), W('calf' + s), 0.433), 0.100));
+      tot = add(tot, mul(lerp(W('calf' + s), W('foot' + s), 0.433), 0.0465));
+      tot = add(tot, mul(mul(add(footPoint(s, F.hb), footPoint(s, F.toe2)), 0.5), 0.0145));
+    }
+    return tot;
+  }
+  function feetFrac(c) {
+    const F = RD().F, hb = mul(add(footPoint('_l', F._l.hb), footPoint('_r', F._r.hb)), 0.5), tp = mul(add(footPoint('_l', F._l.toe2), footPoint('_r', F._r.toe2)), 0.5);
+    const u = [tp[0] - hb[0], 0, tp[2] - hb[2]], L = len(u);
+    return dot(sub(c, hb), mul(u, 1 / L)) / L;
+  }
+  function headPitch() { const u = qrot(qmul(sk.wquat('head'), qinv(RD().restQ.head)), UP); return Math.atan2(u[2], u[1]) * R2D; }
+  function thighVsFoot(s) {
+    const F = RD().F[s], hb = footPoint(s, F.hb), t2 = footPoint(s, F.toe2), fa = nrm([t2[0] - hb[0], 0, t2[2] - hb[2]]);
+    const th = sub(sk.wpos('calf' + s), sk.wpos('thigh' + s)), thh = nrm([th[0], 0, th[2]]);
+    return Math.atan2(dot(cross(fa, thh), UP), dot(fa, thh)) * R2D * -sg(s);
+  }
+  // ---- solve helpers
+  function solveLin(J, r) {      // Gaussian elimination with partial pivoting (n <= 3)
+    const n = r.length, A = J.map((row, i) => row.concat([-r[i]]));
+    for (let c = 0; c < n; c++) {
+      let p = c; for (let i = c + 1; i < n; i++) if (Math.abs(A[i][c]) > Math.abs(A[p][c])) p = i;
+      [A[c], A[p]] = [A[p], A[c]];
+      if (Math.abs(A[c][c]) < 1e-15) return null;
+      for (let i = c + 1; i < n; i++) { const f = A[i][c] / A[c][c]; for (let j = c; j <= n; j++) A[i][j] -= f * A[c][j]; }
+    }
+    const x = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) { let s = A[i][n]; for (let j = i + 1; j < n; j++) s -= A[i][j] * x[j]; x[i] = s / A[i][i]; }
+    return x;
+  }
+  function newton(f, x, tol = 0.01, it = 25, h = 1e-4, maxstep = 0.08) {
+    x = x.slice();
+    for (let k = 0; k < it; k++) {
+      const r = f(x); if (Math.max(...r.map(Math.abs)) < tol) break;
+      const J = r.map(() => new Array(x.length).fill(0));
+      for (let i = 0; i < x.length; i++) { const xe = x.slice(); xe[i] += h; const re = f(xe); for (let j = 0; j < r.length; j++) J[j][i] = (re[j] - r[j]) / h; }
+      const dx = solveLin(J, r); if (!dx) break;
+      const n = Math.max(...dx.map(Math.abs)), sc = n > maxstep ? maxstep / n : 1;
+      x = x.map((v, i) => v + dx[i] * sc);
+    }
+    return x;
+  }
+  const spineList = delta => C.spine_w.map(([b, wt]) => [b, [1, 0, 0], delta * wt]);
+  function trunkSolve(sol, target, look) {
+    const leanOf = dl => { sol.spine = spineList(dl); realize(sol, 1, 0); return trunkLean(); };
+    const fracOf = dl => { sol.spine = spineList(dl); realize(sol, 1, 0); return feetFrac(comSeg()); };
+    let d = 0;
+    if (target[0] === 'lean') {
+      d = target[1] - leanOf(0);
+      for (let k = 0; k < 5; k++) { const err = target[1] - leanOf(d); if (Math.abs(err) < 0.02) break; d += err; }
+    } else {
+      let lo = -25, hi = 85, flo = fracOf(lo) - target[1]; const fhi = fracOf(hi) - target[1];
+      if (flo * fhi > 0) d = Math.abs(flo) < Math.abs(fhi) ? lo : hi;
+      else for (let k = 0; k < 40; k++) {
+        d = 0.5 * (lo + hi); const fm = fracOf(d) - target[1]; if (Math.abs(fm) < 1e-4) break;
+        if ((fm < 0) === (flo < 0)) { lo = d; flo = fm; } else hi = d;
+      }
+    }
+    sol.spine = spineList(d);
+    if (look !== undefined && look !== null) {
+      realize(sol, 1, 0); const c = look - headPitch();
+      sol.spine = sol.spine.concat(C.look_w.map(([b, wt]) => [b, [1, 0, 0], c * wt]));
+    }
+    return d;
+  }
+  // ---- per pose type (pose_qa.py solve_squat / solve_split / solve_single)
+  function solveSquat(L, ops) {
+    const R = RD(), feet = {};
+    const setFeet = k => S2.forEach(s => {
+      const F = R.F[s], yaw = L.yaw !== undefined ? sg(s) * (L.yaw - F.turnout0) : 0;
+      feet[s] = {mode: 'flat', pos: [k === 'rest' ? F.hbf[0] : sg(s) * k * R.SHW / 2, 0, F.hbf[2]], yaw, ang: 0};
+    });
+    const stance = L.stance === undefined ? 'rest' : L.stance;
+    setFeet(stance === 'align' ? 1.0 : stance);
+    const sol = {P: R.P0.slice(), dqP: qaxis(XA, L.pelvis_tilt || 0), spine: [], feet, ops};
+    const second = L.thigh === 'horizontal' ? ['thigh', 0] : ['knee', L.knee === undefined ? 90 : L.knee];
+    const x0 = [R.P0[1] - 0.45, R.P0[2] - 0.12];
+    function legsFor(bt) {
+      sol.spine = [];
+      const f = x => {
+        sol.P = [R.P0[0], x[0], x[1]]; realize(sol, 1, 0);
+        const st = S2.map(legState), b = (st[0].beta + st[1].beta) / 2;
+        if (second[0] === 'thigh') {
+          const e = S2.reduce((a, s, i) => a + Math.asin(Math.max(-1, Math.min(1, st[i].thighEl / R.F[s].L1))) * R2D, 0) / 2;
+          return [b - bt, e - second[1]];
+        }
+        return [b - bt, (st[0].kappa + st[1].kappa) / 2 - second[1]];
+      };
+      const x = newton(f, x0); sol.P = [R.P0[0], x[0], x[1]];
+    }
+    function stanceFor(bt) {
+      let [lo, hi] = L.stance_range || [0.85, 1.3], k;
+      const ga = kk => { setFeet(kk); legsFor(bt); return (thighVsFoot('_l') + thighVsFoot('_r')) / 2 - (L.align_deg || 0); };
+      let glo = ga(lo); const ghi = ga(hi);
+      if ((glo < 0) === (ghi < 0)) k = Math.abs(glo) < Math.abs(ghi) ? lo : hi;
+      else for (let it = 0; it < 30; it++) {
+        k = 0.5 * (lo + hi); const gm = ga(k); if (Math.abs(gm) < 0.01) break;
+        if ((gm < 0) === (glo < 0)) { lo = k; glo = gm; } else hi = k;
+      }
+      setFeet(k); sol.stance = k;
+    }
+    function solveAt(bt, look) {
+      if (stance === 'align') stanceFor(bt);
+      legsFor(bt);
+      let tr = L.trunk === undefined ? 0 : L.trunk;
+      if (tr === 'shin') { realize(sol, 1, 0); tr = (legState('_l').beta + legState('_r').beta) / 2; }
+      trunkSolve(sol, tr === 'balance' ? ['frac', L.com] : ['lean', tr], look);
+    }
+    if (L.beta === 'balance') {
+      const g = b => { solveAt(b, null); realize(sol, 1, 0); return feetFrac(comSeg()) - L.com; };
+      let b0 = 30, b1 = 38, g0 = g(b0), g1 = g(b1);
+      for (let k = 0; k < 12; k++) {
+        if (Math.abs(g1) < 2e-4 || g1 === g0) break;
+        const b2 = Math.min(55, Math.max(15, b1 - g1 * (b1 - b0) / (g1 - g0)));
+        b0 = b1; b1 = b2; g0 = g1; g1 = g(b1);
+      }
+      sol.beta = b1; solveAt(b1, L.look);
+    } else solveAt(L.beta, L.look);
+    if (L.stool) { realize(sol, 1, C.fit_iters); sol.stool = stoolFromPose(); }
+    return sol;
+  }
+  function stoolFromPose() {
+    flushAll();
+    const R = RD(), B = posed(R.butt), kz = 0.5 * (sk.wpos('calf_l')[2] + sk.wpos('calf_r')[2]);
+    let top = Infinity, z0 = Infinity;
+    for (const p of B) if (p[2] < kz - C.stool_front && Math.abs(p[0]) < 0.2) { top = Math.min(top, p[1]); z0 = Math.min(z0, p[2]); }
+    const r4 = x => Math.round(x * 1e4) / 1e4;
+    return {top: Math.round((top - C.clear) * 1e5) / 1e5, x: [-0.21, 0.21], z: [r4(z0 - 0.04), r4(kz - C.stool_front)]};
+  }
+  function solveSplit(L, ops) {
+    const R = RD(), f = L.front, r = other(f), Ff = R.F[f], Fr = R.F[r];
+    const dq = qaxis(XA, L.pelvis_tilt || 0), hrOff = qrot(dq, sub(Fr.thigh_p, R.P0)), hfOff = qrot(dq, sub(Ff.thigh_p, R.P0));
+    const e = L.rear_hip_ext * D2R, th = L.rear_mtp, contact = L.rear_knee_h === 'contact';
+    let kh = contact ? C.kneel_h0 : L.rear_knee_h * R.stature;
+    const yawR = sg(r) * ((L.rear_yaw || 0) - Fr.turnout0), yawF = sg(f) * ((L.front_yaw || 0) - Ff.turnout0);
+    const qGr = qaxis(UP, yawR), qGf = qaxis(UP, yawF), wd = L.width === undefined ? 1 : L.width;
+    const sol = {P: R.P0.slice(), dqP: dq, spine: [], ops, feet: {}};
+    for (let it = 0; it < (contact ? C.kneel_iters : 1); it++) {
+      const P = [R.P0[0], kh + Fr.L1 * Math.cos(e) - hrOff[1], R.P0[2]];
+      const Hr = add(P, hrOff), Kr = add(Hr, mul([0, -Math.cos(e), -Math.sin(e)], Fr.L1));
+      const Aup = add(Fr.pmtp, qrot(qaxis(Fr.side0, th), sub(Fr.foot_p, Fr.pmtp)));
+      const ax = Fr.foot_p[0] * wd, dy = Aup[1] - Kr[1], dxx = ax - Kr[0];
+      const dz = Math.sqrt(Math.max(0, Fr.L2 * Fr.L2 - dy * dy - dxx * dxx)), Ar = [ax, Aup[1], Kr[2] - dz];
+      const posR = sub(Ar, qrot(qGr, sub(Aup, Fr.hbf))); posR[1] = 0;
+      const Hf = add(P, hfOff), ff = qrot(qGf, Ff.f0), bf = L.front_beta * D2R;
+      const Afx = Ff.foot_p[0] * wd, Afy = Ff.foot_p[1], Kx = Afx + Ff.L2 * Math.sin(bf) * ff[0], Ky = Afy + Ff.L2 * Math.cos(bf);
+      const rad = Ff.L1 * Ff.L1 - (Kx - Hf[0]) ** 2 - (Ky - Hf[1]) ** 2, Kz = Hf[2] + Math.sqrt(Math.max(0, rad));
+      const Af = [Afx, Afy, Kz - Ff.L2 * Math.sin(bf) * ff[2]], posF = sub(Af, qrot(qGf, sub(Ff.foot_p, Ff.hbf))); posF[1] = 0;
+      sol.P = P;
+      sol.feet = {[r]: {mode: 'heel_up', pos: posR, yaw: yawR, ang: th}, [f]: {mode: 'flat', pos: posF, yaw: yawF, ang: 0}};
+      if (contact) {
+        const opsSave = sol.ops; sol.ops = []; realize(sol, 1, C.fit_iters); sol.ops = opsSave;
+        flushAll(); kh -= sampleY(Fr.knee) - C.clear;
+      }
+    }
+    const tr = L.trunk === undefined ? 0 : L.trunk;
+    if (tr === 'balance') {       // CoM over the middle of the stance (front foot centre <-> rear toe pads)
+      const Gf = placeXf(f, sol.feet[f]).G, Gr = placeXf(r, sol.feet[r]).G;
+      const zt = 0.5 * (Gf(add(Ff.hbf, mul(Ff.f0, 0.5 * Ff.FL)))[2] + Gr(add(Fr.hbf, mul(Fr.f0, 0.85 * Fr.FL)))[2]);
+      let [lo, hi] = L.trunk_range || [0, 12], lam = null;
+      const cz = l => { trunkSolve(sol, ['lean', l], null); realize(sol, 1, 0); return comSeg()[2] - zt; };
+      const flo = cz(lo), fhi = cz(hi);
+      if (flo >= 0) lam = lo; else if (fhi <= 0) lam = hi;
+      else for (let k = 0; k < 30; k++) { lam = 0.5 * (lo + hi); const fm = cz(lam); if (Math.abs(fm) < 1e-4) break; if (fm < 0) lo = lam; else hi = lam; }
+      trunkSolve(sol, ['lean', lam], L.look); sol.trunk = lam;
+    } else trunkSolve(sol, ['lean', tr], L.look);
+    sol.rear = r;
+    return sol;
+  }
+  function solveSingle(L, ops) {
+    const R = RD(), st = L.stand, F = R.F[st];
+    const pos = F.hbf.slice(); if (L.stand_width !== undefined) pos[0] = sg(st) * L.stand_width * R.HIPW / 2;    // standing heel under the hip
+    const sol = {P: R.P0.slice(), dqP: qaxis(XA, L.pelvis_tilt || 0), spine: [], ops, feet: {[st]: {mode: 'flat', pos, yaw: 0, ang: 0}, [other(st)]: {mode: 'free'}}};
+    const cRest = add(pos, mul(F.f0, L.com * F.FL));
+    const dT = Math.sqrt(F.L1 * F.L1 + F.L2 * F.L2 + 2 * F.L1 * F.L2 * Math.cos(L.knee * D2R));   // hip -> ankle distance for that knee flexion
+    const f = x => { sol.P = x.slice(); realize(sol, 1, 0); const c = comSeg(), s_ = legState(st); return [(len(sub(s_.A, s_.H)) - dT) * 1000, (c[0] - cRest[0]) * 1000, (c[2] - cRest[2]) * 1000]; };
+    sol.P = newton(f, add(R.P0, [sg(st) * 0.05, -0.03, 0]), 0.02);
+    return sol;
+  }
+  function solve(name) {
+    if (kit.cache[name]) return kit.cache[name];
+    const spec = TABLE.poses[name], ops = spec.ops || [], L = spec.legs, R = RD();
+    let sol;
+    if (!L) sol = {P: R.P0.slice(), dqP: I4.slice(), spine: [], feet: {}, ops};
+    else if (L.type === 'squat') sol = solveSquat(L, ops);
+    else if (L.type === 'split') sol = solveSplit(L, ops);
+    else if (L.type === 'single') sol = solveSingle(L, ops);
+    sol.name = name;
+    return (kit.cache[name] = sol);
+  }
+  // ---- the walk: treadmill contact phases (pose_qa.py walk_sol)
+  function walkSol(t) {
+    const R = RD(), W = TABLE.walk, st = R.stature, T = W.period, duty = W.duty, stride = 2 * W.step * st, D = duty * stride;
+    const pl = ((t / T + W.phase0) % 1 + 1) % 1, feet = {}, ops = [];
+    for (const s of S2) {
+      const F = R.F[s], p = s === '_l' ? pl : (pl + 0.5) % 1, yaw = sg(s) * (W.turnout - F.turnout0);
+      const zhs = F.thigh_p[2] - (F.foot_p[2] - F.hbf[2]) + D / 2 + W.ahead * st, x = F.hbf[0];
+      if (p < duty) {
+        const pos = [x, 0, zhs - D * p / duty];
+        if (p < W.flat_at) feet[s] = {mode: 'heel', pos, yaw, ang: W.heel_pitch * (1 - smooth(0, W.flat_at, p))};
+        else if (p < W.heel_off) feet[s] = {mode: 'flat', pos, yaw, ang: 0};
+        else feet[s] = {mode: 'heel_up', pos, yaw, ang: W.mtp_toe_off * smooth(W.heel_off, duty, p)};
+      } else {
+        const u = (p - duty) / (1 - duty);
+        const Ato = footTargets(s, {mode: 'heel_up', pos: [x, 0, zhs - D], yaw, ang: W.mtp_toe_off}).At;
+        const Ahs = footTargets(s, {mode: 'heel', pos: [x, 0, zhs], yaw, ang: W.heel_pitch}).At;
+        const A = add(lerp(Ato, Ahs, smooth(0, 1, u)), mul(UP, W.lift * st * Math.sin(Math.PI * Math.pow(u, W.lift_skew))));
+        const pitch = W.mtp_toe_off + (-W.heel_pitch - W.mtp_toe_off) * smooth(0, W.pitch_end, u);
+        feet[s] = {mode: 'swing', ankle: A, yaw, ang: pitch, mtp: W.mtp_toe_off * (1 - smooth(0, W.mtp_relax, u))};
+      }
+      const c = -W.arm * Math.cos(2 * Math.PI * p);
+      ops.push(['aim', 'upperarm' + s, 'lowerarm' + s, [0.3 * sg(s), -Math.cos(c * D2R), Math.sin(c * D2R)]]);
+      const ee = c + W.elbow + W.elbow_fwd * Math.max(0, -Math.cos(2 * Math.PI * p));
+      ops.push(['aim', 'lowerarm' + s, 'hand' + s, [0.16 * sg(s), -Math.cos(ee * D2R), Math.sin(ee * D2R)]]);
+    }
+    const ph = 2 * Math.PI * (pl - duty / 2);
+    const P = add(R.P0, [W.sway * st * Math.cos(ph), -W.drop * st + W.bob * st * Math.cos(2 * ph), 0]);
+    const spine = [['spine_01', [1, 0, 0], W.lean], ['spine_03', [0, 1, 0], W.twist * Math.cos(2 * Math.PI * pl)]];
+    return {P, dqP: qaxis(UP, -W.yaw * Math.cos(2 * Math.PI * pl)), spine, feet, ops, name: 'Walk t=' + t.toFixed(3)};
+  }
+  // ---- public: pose the page's skeleton (the page's resetPose runs first, inside realize)
+  kit.apply = (name, w = 1, fit = C.fit_iters) => {
+    const sol = typeof name === 'string' ? solve(name) : name;
+    if (w === 1 && fit === C.fit_iters && sol.final) {        // cached result of the full solve + fit
+      env.reset(); sk.read(); for (const n in sol.final) { sk.q[n] = sol.final[n][0].slice(); sk.p[n] = sol.final[n][1].slice(); }
+      sk.w = {}; handsDone.length = 0; runHands(sol); flushAll(); return sol;
+    }
+    realize(sol, w, fit); flushAll();
+    if (w === 1 && fit === C.fit_iters && typeof name === 'string') { sol.final = {}; for (const n of sk.names) sol.final[n] = [sk.q[n].slice(), sk.p[n].slice()]; }
+    return sol;
+  };
+  function runHands(sol) { for (const op of sol.ops || []) if (op[0] === 'hands' && env.hands && env.hands.available(op[1])) S2.forEach(s => handsDone.push([s, op[1], 1])); }
+  kit.walk = t => { const sol = walkSol(t); realize(sol, 1, C.fit_iters); flushAll(); return sol; };
+  kit.solve = solve;
+  kit.invalidate = () => { kit.rest = null; kit.cache = {}; };
+  kit.dump = names => {      // joint positions (character frame) + the lowest body vertex, for the Blender cross-check
+    const out = {};
+    for (const n of names) {
+      const sol = n.startsWith('Walk t=') ? kit.walk(parseFloat(n.slice(7))) : kit.apply(n);
+      const j = {}; for (const b of ['pelvis', 'thigh_l', 'thigh_r', 'calf_l', 'calf_r', 'foot_l', 'foot_r', 'ball_l', 'ball_r', 'spine_03', 'neck_01', 'head', 'hand_l', 'hand_r', 'lowerarm_l', 'lowerarm_r']) if (sk.has(b)) j[b] = sk.wpos(b).map(x => Math.round(x * 1e5) / 1e5);
+      let mn = Infinity; const pos = body.geometry.attributes.position;
+      _m.copy(env.root.matrixWorld).invert();
+      for (let i = 0; i < pos.count; i++) mn = Math.min(mn, vtx(body, i, true)[1]);
+      out[n] = {joints: j, min_y_mm: Math.round(mn * 1e5) / 100, stool: sol.stool || null};
+    }
+    return out;
+  };
+  return kit;
+}
+return {TABLE, make};
+})();
+/*POSEKIT_END*/
+// hands: the Fists pose (POSEKIT op 'hands') = if (window.RTS_HANDS) RTS_HANDS.apply(bones, s, 'fist', 1); else the legacy curl
+const POSE_HANDS = {available: p => !!(window.RTS_HANDS && RTS_HANDS.apply && (!RTS_HANDS.data || !RTS_HANDS.data.presets || RTS_HANDS.data.presets[p])),
+                    apply: (s, p, w) => RTS_HANDS.apply(bones, s, p, w)};
+let PKL = null, STOOL = null;
+const POSES = {};      // clip name -> () => pose (filled by makeViewerClips from POSEKIT.TABLE.lists.lookdev)
+function idlePose(t) {
+  const br = Math.sin(2 * Math.PI * t / 4);
+  rotW('spine_03', X, -1.2 * br); rotW('spine_04', X, -0.8 * br);
+  SIDES.forEach(s => { clavUp(s, 1.5 + 1.2 * br); aim('upperarm' + s, 'lowerarm' + s, V(0.27 * sg(s), -1, 0.02));
+    aim('lowerarm' + s, 'hand' + s, V(0.16 * sg(s), -1, 0.24)); });
+  rotW('neck_01', Y, 7 * Math.sin(2 * Math.PI * t / 8)); rotW('head', X, 2.5 * Math.sin(2 * Math.PI * t / 8 + 1));
+}
+function bake(name, dur, fps, fn) {     // fn(t) poses the skeleton (after resetPose); returns {stool} or nothing
+  const n = Math.max(2, Math.round(dur * fps) + 1), times = new Float32Array(n), vis = [];
+  const Q = boneList.map(() => new Float32Array(n * 4)), P = boneList.map(() => new Float32Array(n * 3));
+  for (let i = 0; i < n; i++) {
+    const t = dur * i / (n - 1); times[i] = t; resetPose(); const r = fn(t) || {};
+    boneList.forEach((b, j) => { b.quaternion.toArray(Q[j], i * 4); b.position.toArray(P[j], i * 3); }); vis.push(!!r.stool);
+  }
+  resetPose();
+  const tracks = [];
+  boneList.forEach((b, j) => {
+    const r = restQ.get(b), q = Q[j], rp = restP.get(b), p = P[j]; let moved = false, pmoved = b.name === HIPS;
+    for (let i = 0; i < n && !moved; i++) moved = Math.abs(Math.abs(q[i * 4] * r.x + q[i * 4 + 1] * r.y + q[i * 4 + 2] * r.z + q[i * 4 + 3] * r.w) - 1) > 1e-7;
+    for (let i = 0; i < n && !pmoved; i++) pmoved = Math.abs(p[i * 3] - rp.x) + Math.abs(p[i * 3 + 1] - rp.y) + Math.abs(p[i * 3 + 2] - rp.z) > 1e-7;
+    if (moved) tracks.push(new THREE.QuaternionKeyframeTrack(b.name + '.quaternion', times, q));
+    if (pmoved) tracks.push(new THREE.VectorKeyframeTrack(b.name + '.position', times, p));      // pelvis + toe pivots
+  });
+  if (STOOL && vis.some(v => v)) tracks.push(new THREE.BooleanKeyframeTrack(STOOL.name + '.visible', times, vis));
+  return {name, clip: new THREE.AnimationClip(name, dur, tracks), source: 'viewer', duration: dur};
+}
+function makeViewerClips() {
+  const need = ['upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r', 'thigh_l', 'calf_l', 'foot_l',
+    'thigh_r', 'calf_r', 'foot_r', 'spine_01'];
+  HIPS = ['pelvis', 'hips', 'Hips'].find(n => bones[n]);
+  if (!HIPS || need.some(n => !bones[n])) return [];
+  resetPose();
+  restFootY = Math.min(bones.foot_l.getWorldPosition(_v1).y, bones.foot_r.getWorldPosition(_v2).y);
+  const T = POSEKIT.TABLE, list = T.lists.lookdev.filter(([, k]) => T.poses[k]);
+  const solverOk = HIPS === 'pelvis' && ['ball_l', 'ball_r', 'thigh_l', 'thigh_r', 'calf_l', 'calf_r', 'neck_01', 'head'].every(n => bones[n]);
+  const out = [bake('Idle (breathing)', 8, 24, idlePose)];
+  if (!solverOk) return out;           // not the rts_human skeleton: no solver poses
+  PKL = POSEKIT.make({bones, root: charRoot, reset: resetPose, hands: POSE_HANDS, correctives: null});
+  for (const [disp, key] of list) POSES[disp] = () => PKL.apply(key);
+  const blend = (key, w) => {          // 0 = rest, 1 = the solved pose; in-betweens re-solve the legs (feet stay planted)
+    if (w <= 1e-4) return {};
+    const sol = PKL.apply(key, w, w >= 1 - 1e-6 ? T.consts.fit_iters : T.consts.blend_fit_iters);
+    if (sol.stool && !STOOL) {         // the Sit stool: visible during that clip (a BooleanKeyframeTrack), hidden by resetPose
+      const st = sol.stool;
+      STOOL = new THREE.Mesh(new THREE.BoxGeometry(st.x[1] - st.x[0], st.top - 0.001, st.z[1] - st.z[0]), new THREE.MeshStandardMaterial({color: 0x6b4a32, roughness: 0.85}));
+      STOOL.position.set((st.x[0] + st.x[1]) / 2, 0.001 + (st.top - 0.001) / 2, (st.z[0] + st.z[1]) / 2); STOOL.name = '__pose_stool__';
+      STOOL.castShadow = STOOL.receiveShadow = true; STOOL.visible = false; charRoot.add(STOOL);
+    }
+    return {stool: !!sol.stool};
+  };
+  out.push(bake('Walk (in place)', T.walk.period, T.walk.fps, t => { PKL.walk(t); }));
+  const seg = 2.0;
+  out.push(bake('Range of motion', seg * list.length, 24, t => {
+    const i = Math.min(list.length - 1, Math.floor(t / seg)), u = t - i * seg;
+    return blend(list[i][1], smooth(0, 0.5, u) * (1 - smooth(1.5, 2.0, u)));
+  }));
+  for (const [disp, key] of list) out.push(bake(disp, 2.4, 24, t => blend(key, smooth(0, 0.6, t) * (1 - smooth(1.8, 2.4, t)))));
+  return out;
+}
+
+// ---------------------------------------------------------------- correctives (rts_correctives node extras)
+function driveCorrectives() {
+  if (!DRIVERS.length) return;
+  if (!S.correctives) { for (const d of DRIVERS) overlay[d.morph] = 0; return; }
+  const fwd = Z.clone().applyQuaternion(charRoot.getWorldQuaternion(_q1));
+  for (const d of DRIVERS) {
+    if (d.cone) {   // cone reader: the bone's local axis seen in its ref bone's frame vs the key direction (smoothstep)
+      const B = bones[d.bone], R = bones[d.ref]; if (!B || !R) continue;
+      const qb = B.getWorldQuaternion(new THREE.Quaternion()), qr = R.getWorldQuaternion(new THREE.Quaternion()).invert();
+      const a = new THREE.Vector3(d.axis[0], d.axis[1], d.axis[2]).applyQuaternion(qb).applyQuaternion(qr).angleTo(d.t) / D2R;
+      const t = clamp01((d.angle_from - a) / (d.angle_from - d.angle_to));
+      overlay[d.morph] = Math.max(overlay[d.morph] || 0, t * t * (3 - 2 * t)); continue;
+    }
+    const B = bones[d.bone], C = bones[d.child], R = bones[d.ref], RC = bones[d.ref_child];
+    if (!B || !C || !R || !RC) continue;
+    const a = C.getWorldPosition(new THREE.Vector3()).sub(B.getWorldPosition(_v1)).normalize();
+    const b = RC.getWorldPosition(new THREE.Vector3()).sub(R.getWorldPosition(_v1)).normalize(); if (d.ref_neg) b.negate();
+    let w = clamp01((a.angleTo(b) / D2R - d.deg[0]) / (d.deg[1] - d.deg[0]));
+    if (d.gate_fwd) { const g = clamp01(a.dot(fwd) / d.gate_fwd); w *= g * g * (3 - 2 * g); }
+    overlay[d.morph] = Math.max(overlay[d.morph] || 0, w);
+  }
+}
+
+// ---------------------------------------------------------------- talk demo (visemes + blinks + brows + head)
+const PHRASE = [
+  ['', [['sil', .25]]], ['For', [['FF', .09], ['oh', .13], ['RR', .10]]], ['the', [['TH', .07], ['E', .07]]],
+  ['King!', [['kk', .08], ['ih', .13], ['nn', .12]], 1], ['', [['sil', .42]]],
+  ['Hold', [['aa', .05], ['oh', .15], ['nn', .06], ['DD', .07]]], ['the', [['TH', .06], ['E', .06]]],
+  ['line!', [['nn', .07], ['aa', .17], ['ih', .08], ['nn', .11]], 1], ['', [['sil', .3]]],
+  ['We', [['ou', .10], ['ih', .11]]], ['ride', [['RR', .08], ['aa', .14], ['ih', .06], ['DD', .07]]], ['at', [['aa', .10], ['DD', .06]]],
+  ['dawn.', [['DD', .06], ['oh', .17], ['nn', .13]]], ['', [['sil', .6]]]];
+const TALK = {keys: [], words: [], dur: 0};
+{ let t = 0;
+  for (const [w, vs, emph] of PHRASE) { const t0 = t;
+    for (const [v, d] of vs) { if (v !== 'sil') TALK.keys.push({v, s: t, d, w: emph ? 1 : 0.82}); t += d; }
+    if (w) TALK.words.push({w, s: t0, e: t}); }
+  TALK.dur = t; }
+const TALK_BLINKS = [0.1, 1.36, 2.72, 3.95];
+// ARKit fallbacks when a model has no viseme shapes
+const VIS_ARKIT = {PP: {mouthClose: .5, mouthPressLeft: .4, mouthPressRight: .4}, FF: {mouthRollLower: .6, mouthUpperUpLeft: .2, mouthUpperUpRight: .2, jawOpen: .06},
+  TH: {jawOpen: .15, tongueOut: .25}, DD: {jawOpen: .2}, kk: {jawOpen: .25}, CH: {mouthFunnel: .45, jawOpen: .15},
+  SS: {mouthStretchLeft: .3, mouthStretchRight: .3, jawOpen: .08}, nn: {jawOpen: .14}, RR: {mouthPucker: .35, jawOpen: .14},
+  aa: {jawOpen: .55}, E: {jawOpen: .3, mouthStretchLeft: .35, mouthStretchRight: .35}, ih: {jawOpen: .2, mouthSmileLeft: .3, mouthSmileRight: .3},
+  oh: {jawOpen: .4, mouthFunnel: .6}, ou: {mouthPucker: .8, jawOpen: .12}};
+function talkTime() {
+  if (!S.talk) return null;
+  if (S.talk.paused != null) return S.talk.paused;
+  let t = (performance.now() - S.talk.t0) / 1000;
+  if (t > TALK.dur) { if (S.talk.loop) { S.talk.t0 += TALK.dur * 1000; t -= TALK.dur; } else { stopTalk(); return null; } }
+  return t;
+}
+function blinkAt(t, tb, d = 0.16) { return t >= tb && t <= tb + d ? Math.sin((t - tb) / d * Math.PI) : 0; }
+const headDelta = new THREE.Quaternion(); let headSaved = null;
+function talkOverlay(t) {
+  headDelta.identity();
+  if (t == null) return;
+  const add = (n, v) => { if (n && morphCount[n]) overlay[n] = Math.min(1, Math.max(overlay[n] || 0, v)); };
+  const useVis = visemeCount() >= 6;
+  for (const k of TALK.keys) {
+    const w = k.w * smooth(k.s - 0.06, k.s + 0.03, t) * (1 - smooth(k.s + k.d - 0.03, k.s + k.d + 0.08, t));
+    if (w <= 0) continue;
+    if (useVis && VIS[k.v]) add(VIS[k.v], w);
+    else for (const [n, v] of Object.entries(VIS_ARKIT[k.v] || {})) add(n, v * w);
+  }
+  let b = 0; for (const tb of TALK_BLINKS) b = Math.max(b, blinkAt(t, tb));
+  add(BLINK[0], b); add(BLINK[1], b);
+  const up = 0.38 * smooth(0.45, 0.62, t) * (1 - smooth(0.95, 1.2, t));
+  const down = 0.32 * smooth(1.3, 1.5, t) * (1 - smooth(2.1, 2.4, t));
+  add('browInnerUp', up); add('browOuterUpLeft', up); add('browOuterUpRight', up);
+  add('browDownLeft', down); add('browDownRight', down); add('eyeSquintLeft', down * 0.6); add('eyeSquintRight', down * 0.6);
+  const sm = 0.28 * smooth(3.1, 3.35, t) * (1 - smooth(3.9, 4.3, t)); add('mouthSmileLeft', sm); add('mouthSmileRight', sm);
+  const nod = 5 * Math.exp(-Math.pow((t - 0.72) / 0.12, 2)) + 4 * Math.exp(-Math.pow((t - 2.05) / 0.13, 2));
+  const tilt = 3.5 * smooth(3.0, 3.4, t) * (1 - smooth(3.9, 4.4, t));
+  const yaw = 4 * Math.sin(t * 1.3);
+  headDelta.setFromEuler(new THREE.Euler(nod * D2R, yaw * D2R, -tilt * D2R, 'YXZ'));
+  const w = TALK.words.find(x => t >= x.s && t < x.e);
+  showCaption(w);
+}
+let capWord = undefined;
+function showCaption(w) {
+  const cap = $('#caption');
+  if (!S.talk || (document.body.classList.contains('clean') && !S.captionAlways)) { cap.hidden = true; capWord = undefined; return; }
+  if (w === capWord && !cap.hidden) return; capWord = w;
+  cap.hidden = false; cap.textContent = '';
+  for (const x of TALK.words) { const s = el('span', x === w ? 'on' : '', x.w + ' '); cap.appendChild(s); }
+}
+function startTalk(loop) { S.talk = {t0: performance.now(), loop: !!loop}; syncUI(); }
+function stopTalk() { S.talk = null; $('#caption').hidden = true; capWord = undefined; syncUI(); }
+function applyHead() {   // additive head offset (talk demo), undone after the frame is drawn
+  headSaved = null;
+  if (!HEAD || (headDelta.x === 0 && headDelta.y === 0 && headDelta.z === 0)) return;
+  headSaved = HEAD.quaternion.clone();
+  const wq = HEAD.getWorldQuaternion(new THREE.Quaternion()), pq = HEAD.parent.getWorldQuaternion(new THREE.Quaternion());
+  // express the offset in the character's frame so a nod is a nod whatever the turntable angle
+  const cq = charRoot.getWorldQuaternion(new THREE.Quaternion());
+  const dq = cq.clone().multiply(headDelta).multiply(cq.clone().invert());
+  HEAD.quaternion.copy(pq.invert().multiply(dq.multiply(wq)));
+  HEAD.updateMatrixWorld(true);
+}
+function undoHead() { if (headSaved) { HEAD.quaternion.copy(headSaved); headSaved = null; } }
+
+// ---------------------------------------------------------------- idle blinks
+let nextBlink = 1.2, blinkT0 = -1;
+function blinkOverlay(now) {
+  if (!S.blink || S.talk) return;
+  const t = now / 1000;
+  if (blinkT0 < 0 && t > nextBlink) { blinkT0 = t; }
+  if (blinkT0 >= 0) {
+    const v = blinkAt(t, blinkT0, 0.15);
+    if (t > blinkT0 + 0.15) { blinkT0 = -1; nextBlink = t + 2.6 + 2.4 * ((Math.sin(t * 12.9898) * 43758.5453) % 1 + 1) % 1; }
+    if (BLINK[0]) overlay[BLINK[0]] = Math.max(overlay[BLINK[0]] || 0, v);
+    if (BLINK[1]) overlay[BLINK[1]] = Math.max(overlay[BLINK[1]] || 0, v);
+  }
+}
+
+// ---------------------------------------------------------------- morphs
+function applyMorphs() {
+  for (const {mesh, idx} of morphMeshes) {
+    const inf = mesh.morphTargetInfluences, fromClip = clipMorphMeshes.has(mesh);
+    for (const [i, n] of idx) {
+      let v = Math.max(base[n] || 0, overlay[n] || 0);
+      if (fromClip) v = Math.max(v, inf[i]);
+      inf[i] = Math.min(1, v);
+    }
+  }
+}
+const rowsByName = {};
+function setMorph(n, v) { base[n] = v; syncRow(n); }
+function clearMorphs() { for (const n of morphNames) if (!/^corr?_/.test(n)) base[n] = 0; for (const n in rowsByName) syncRow(n); }
+function syncRow(n) {
+  const r = rowsByName[n]; if (!r) return;
+  const v = r.bi ? (base[r.bi[1]] || 0) - (base[r.bi[0]] || 0) : (base[n] || 0);
+  r.input.value = v; r.out.textContent = v.toFixed(2);
+}
+
+// ---------------------------------------------------------------- shading modes
+function debugMat(m, mode) {
+  if (mode === 'albedo') {
+    const a = new THREE.MeshBasicMaterial({map: m.map || null, color: m.color ? m.color.clone() : new THREE.Color(1, 1, 1), side: m.side,
+      transparent: m.transparent, opacity: m.opacity == null ? 1 : m.opacity, alphaTest: m.alphaTest || 0, depthWrite: m.depthWrite});
+    a.alphaToCoverage = m.alphaTest > 0; a.toneMapped = false; return a;
+  }
+  if (m.transparent) return mode === 'clay' ? m : new THREE.MeshBasicMaterial({visible: false});
+  const a = new THREE.MeshStandardMaterial({color: new THREE.Color(0x908b85).convertSRGBToLinear(), roughness: 0.62, metalness: 0, side: m.side,
+    normalMap: m.normalMap || null, envMapIntensity: 1});
+  if (m.normalMap && m.normalScale) a.normalScale.copy(m.normalScale);
+  const alphaOnly = m.alphaTest > 0 && m.map;
+  if (alphaOnly) { a.map = m.map; a.alphaTest = m.alphaTest; a.alphaToCoverage = true; }
+  a.onBeforeCompile = sh => {
+    if (alphaOnly) sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#ifdef USE_MAP\n diffuseColor.a *= texture2D( map, vUv ).a;\n#endif');
+    if (mode === 'normals') sh.fragmentShader = sh.fragmentShader.replace(/}\s*$/, ' gl_FragColor = vec4( normalize( normal ) * 0.5 + 0.5, diffuseColor.a );\n}');
+  };
+  a.customProgramCacheKey = () => mode + (alphaOnly ? '_a' : '');
+  if (mode === 'normals') a.toneMapped = false;
+  return a;
+}
+function applyCorrNormals() {
+  const geos = new Set();
+  for (const c of corrNormals) { const want = S.corrNormals ? c.raw : c.zero;
+    if (c.geo.morphAttributes.normal[c.i] !== want) { c.geo.morphAttributes.normal[c.i] = want; geos.add(c.geo); } }
+  for (const g of geos) g.dispose();     // three caches the morph texture per geometry: rebuild it
+}
+function applyShading() {
+  for (const o of charMeshes) {
+    const lit = litMat.get(o);
+    if (S.shading === 'lit') o.material = lit;
+    else {
+      let alts = altMat.get(o); if (!alts) { alts = {}; altMat.set(o, alts); }
+      if (!alts[S.shading] || alts.src !== lit) {
+        if (alts.src !== lit) { for (const k in alts) if (k !== 'src') delete alts[k]; alts.src = lit; }
+        alts[S.shading] = Array.isArray(lit) ? lit.map(m => debugMat(m, S.shading)) : debugMat(lit, S.shading);
+      }
+      o.material = alts[S.shading];
+    }
+  }
+  applyMatParams();
+}
+function forMats(fn) {
+  for (const o of charMeshes) for (const m of (Array.isArray(o.material) ? o.material : [o.material])) fn(m, true);
+}
+function applyMatParams() {
+  forMats((m, isChar) => {
+    if (!baseEnv.has(m)) baseEnv.set(m, m.envMapIntensity == null ? 1 : m.envMapIntensity);
+    if (m.envMapIntensity != null) m.envMapIntensity = baseEnv.get(m) * S.env;
+    if (isChar && 'wireframe' in m && m.wireframe !== S.wire) { m.wireframe = S.wire; }
+  });
+}
+function setMatVariant(i) {
+  for (const p of matVariants.prims) {
+    const hit = i >= 0 && p.map.find(mp => mp.variants.includes(i));
+    const done = mat => { litMat.set(p.mesh, mat); applyShading(); };
+    if (!hit) done(p.orig);
+    else p.parser.getDependency('material', hit.material).then(mat => {
+      if (mat.alphaTest > 0) mat.alphaToCoverage = true; if (mat.transparent) mat.depthWrite = false; done(mat); });
+  }
+}
+
+// ---------------------------------------------------------------- skeleton view, ruler
+let skel = null, ruler = null;   // skeleton view: octahedral bones (parent joint -> joint) + joint dots, drawn on top
+const sideCol = n => /(_l|\.l|_left|left)$/i.test(n) || /^(left|l_)/i.test(n) ? 0x4f95ff : /(_r|\.r|_right|right)$/i.test(n) || /^(right|r_)/i.test(n) ? 0xff5a4f : 0xffc72e;
+function makeSkeletonView() {
+  if (!boneList.length) return;
+  const segs = boneList.filter(b => b.parent && b.parent.isBone && boneList.includes(b.parent));
+  const oct = new THREE.BufferGeometry();     // Blender-style bone: base at the parent joint, tip at the child (+Y, length 1)
+  const w = 0.1, P = [[0, 0, 0], [w, w, w], [w, w, -w], [-w, w, -w], [-w, w, w], [0, 1, 0]];
+  const F = [[0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [5, 1, 2], [5, 2, 3], [5, 3, 4], [5, 4, 1]];
+  oct.setAttribute('position', new THREE.Float32BufferAttribute(F.flat().flatMap(i => P[i]), 3)); oct.computeVertexNormals();
+  const mat = new THREE.MeshBasicMaterial({depthTest: false, depthWrite: false, transparent: true, opacity: 0.78, toneMapped: false});
+  const bonesM = new THREE.InstancedMesh(oct, mat, Math.max(1, segs.length));
+  const wire = new THREE.InstancedMesh(oct, new THREE.MeshBasicMaterial({color: 0x10141a, wireframe: true, depthTest: false,
+    depthWrite: false, transparent: true, opacity: 0.35, toneMapped: false}), Math.max(1, segs.length));
+  const dots = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshBasicMaterial({color: 0xffffff,
+    depthTest: false, depthWrite: false, transparent: true, opacity: 0.9, toneMapped: false}), boneList.length);
+  segs.forEach((b, i) => bonesM.setColorAt(i, new THREE.Color(sideCol(b.name))));
+  boneList.forEach((b, i) => dots.setColorAt(i, new THREE.Color(sideCol(b.name)).lerp(new THREE.Color(0xffffff), 0.55)));
+  for (const m of [bonesM, wire, dots]) { m.frustumCulled = false; m.renderOrder = 998; }
+  dots.renderOrder = 999;
+  skel = new THREE.Group(); skel.add(bonesM, wire, dots); skel.visible = false; scene.add(skel);
+  skel.userData = {segs, bonesM, wire, dots};
+}
+const _m4 = new THREE.Matrix4(), _s3 = new THREE.Vector3();
+function updateJoints() {
+  if (!skel || !skel.visible) return;
+  const {segs, bonesM, wire, dots} = skel.userData;
+  segs.forEach((b, i) => {
+    const a = b.parent.getWorldPosition(_v1), c = b.getWorldPosition(_v2), len = a.distanceTo(c);
+    const d = c.clone().sub(a).normalize(); _q1.setFromUnitVectors(Y, len > 1e-6 ? d : Y);
+    const wdt = Math.max(0.03 * K, Math.min(0.5 * len, 0.2 * K));   // unit octahedron is 0.2 wide: ~Blender's proportions
+    _m4.compose(a, _q1, _s3.set(wdt, len, wdt)); bonesM.setMatrixAt(i, _m4); wire.setMatrixAt(i, _m4);
+  });
+  const r = 0.0075 * K;
+  boneList.forEach((b, i) => { b.getWorldPosition(_v1); _m4.compose(_v1, _q2.identity(), _s3.set(r, r, r)); dots.setMatrixAt(i, _m4); });
+  bonesM.instanceMatrix.needsUpdate = wire.instanceMatrix.needsUpdate = dots.instanceMatrix.needsUpdate = true;
+}
+function makeRuler() {
+  const g = new THREE.Group(), pts = [], x = -0.62 * K - 0.25 * H, top = Math.ceil(H * 10) / 10;
+  pts.push(x, 0, 0, x, top, 0);
+  for (let y = 0; y <= top + 1e-6; y += 0.1) { const w = Math.abs(y * 2 - Math.round(y * 2)) < 1e-6 ? 0.08 : 0.035; pts.push(x, y, 0, x + w, y, 0); }
+  pts.push(x - 0.05, H, 0, x + 0.25, H, 0);
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  g.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color: 0x1d2430, toneMapped: false})));
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64; const cx = c.getContext('2d');
+  cx.fillStyle = 'rgba(20,26,35,.82)'; cx.fillRect(0, 0, 256, 64); cx.fillStyle = '#fff'; cx.font = '600 34px -apple-system,Segoe UI,Roboto,sans-serif';
+  cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(H.toFixed(2) + ' m', 128, 34);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map: new THREE.CanvasTexture(c), toneMapped: false, depthTest: false}));
+  sp.scale.set(0.36, 0.09, 1); sp.position.set(x + 0.08, H + 0.08, 0); sp.renderOrder = 997; g.add(sp);
+  g.visible = false; scene.add(g); ruler = g;
+}
+
+// ---------------------------------------------------------------- views, lights, scene modes
+function measure() {
+  upd();
+  const box = new THREE.Box3();
+  for (const o of charMeshes) {
+    if (!o.visible || !isShown(o)) continue;
+    // rest-shape bounds only (BufferGeometry.computeBoundingBox also spans every morph target)
+    if (!o.userData.__restBox) o.userData.__restBox = new THREE.Box3().setFromBufferAttribute(o.geometry.attributes.position);
+    box.union(o.userData.__restBox.clone().applyMatrix4(o.matrixWorld));
+  }
+  if (box.isEmpty()) box.set(new THREE.Vector3(-0.3, 0, -0.2), new THREE.Vector3(0.3, 1.8, 0.2));
+  H = box.max.y - Math.min(0, box.min.y); box.getCenter(center); charW = Math.max(box.max.x - box.min.x, 0.3 * H);
+  K = H > 0.4 && H < 4 ? 1 : H / 1.8;
+  const eyes = boneList.filter(b => /eye/i.test(b.name) && !/(lid|brow|lash)/i.test(b.name));
+  HEAD = bones.head || boneList.find(b => /(^|[_:.])head$/i.test(b.name)) || null;
+  if (eyes.length >= 2) { faceC.set(0, 0, 0); eyes.forEach(b => faceC.add(b.getWorldPosition(_v1))); faceC.divideScalar(eyes.length); }
+  else if (HEAD && headCentroid(faceC)) {}
+  else if (HEAD) faceC.copy(HEAD.getWorldPosition(_v1)).add(new THREE.Vector3(0, 0.09 * K, 0.04 * K));
+  else faceC.set(center.x, box.max.y - 0.12 * H, box.max.z - 0.1 * H);
+  return box;
+}
+function headCentroid(out) {   // rigs without eye bones: centre of the rest vertices weighted mostly to the head (or its children)
+  const under = new Set(); HEAD.traverse(b => { if (b.isBone) under.add(b); });
+  const acc = new THREE.Vector3(), p = new THREE.Vector3(); let n = 0;
+  for (const o of charMeshes) {
+    if (!o.isSkinnedMesh || !isShown(o)) continue;
+    const g = o.geometry, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, pos = g.attributes.position;
+    if (!si || !sw) continue;
+    const idx = o.skeleton.bones.map(b => under.has(b));
+    for (let i = 0; i < pos.count; i++) {
+      const bi = [si.getX(i), si.getY(i), si.getZ(i), si.getW(i)], bw = [sw.getX(i), sw.getY(i), sw.getZ(i), sw.getW(i)];
+      let hw = 0; for (let k = 0; k < 4; k++) if (idx[bi[k]]) hw += bw[k];
+      if (hw > 0.6) { acc.add(p.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld)); n++; }
+    }
+  }
+  if (n < 20) return false;
+  out.copy(acc.divideScalar(n)); return true;
+}
+function isShown(o) { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; }
+function buildViews() {
+  const tb = [center.x, H * 0.52, center.z];
+  const vw = (t, dir, dist, extra) => { const d = V(...dir).multiplyScalar(dist); return Object.assign({p: [t[0] + d.x, t[1] + d.y, t[2] + d.z], t, fov: 30}, extra || {}); };
+  const f = faceC.toArray();
+  VIEWS = {
+    'Full body': {dyn: () => vw(tb, [0.34, 0.1, 1], fitDist(H * 1.1, charW * 1.05, 30))},
+    'Face': {dyn: () => vw([f[0], f[1] - 0.015 * K, f[2]], [0.1, 0.03, 1], Math.max(0.74 * K, fitDist(0.34 * K, 0.3 * K, 30)))},
+    'Face 3/4': {dyn: () => vw([f[0], f[1] - 0.015 * K, f[2]], [0.8, 0.06, 1], Math.max(0.76 * K, fitDist(0.34 * K, 0.32 * K, 30)))},
+    'Back': {dyn: () => vw(tb, [-0.34, 0.12, -1], fitDist(H * 1.1, charW * 1.05, 30))},
+    // the building viewers' RTS camera (work/mkviewer.py 'rts'): ~55 deg down, ~37 m away, 30 deg lens
+    'RTS': {p: [center.x, 0.9 * K + 30.5 * K, center.z + 21.3 * K], t: [center.x, 0.9 * K, center.z], fov: 30, scene: 'town'},
+    'RTS zoom': {p: [center.x, 0.9 * K + 15.3 * K, center.z + 10.7 * K], t: [center.x, 0.9 * K, center.z], fov: 30, scene: 'town'},
+  };
+  const hands = ['hand_l', 'hand_r'].map(n => bones[n]).filter(Boolean);
+  if (hands.length === 2) VIEWS['Hands'] = {dyn: () => {    // frames the hands where they are now (poses, clips)
+    upd(); const a = hands[0].getWorldPosition(new THREE.Vector3()), b = hands[1].getWorldPosition(new THREE.Vector3());
+    const m = a.clone().add(b).multiplyScalar(0.5), fwd = Z.clone().applyQuaternion(charRoot.quaternion);
+    const t = m.clone().addScaledVector(fwd, 0.05 * K), d = Math.max(0.75 * K, a.distanceTo(b) * 1.9 + 0.2 * K);
+    const p = t.clone().addScaledVector(fwd, d).add(new THREE.Vector3(0, 0.25 * d, 0)).addScaledVector(X.clone().applyQuaternion(charRoot.quaternion), 0.25 * d);
+    return {p: p.toArray(), t: t.toArray(), fov: 30}; }};
+  Object.assign(VIEWS, CFG.views || {});
+}
+// Narrow screens: the panel is a bottom sheet, so the camera's principal point moves into the visible area above it.
+function insetPx() {
+  if (innerWidth > 760 || document.body.classList.contains('noui')) return 0;
+  const p = document.body.classList.contains('show-right') ? $('#right') : $('#left');
+  const r = p.getBoundingClientRect(); return r.height ? Math.max(0, innerHeight - r.top) : 0;
+}
+function layoutCamera() {
+  const W = innerWidth, Hh = innerHeight, pb = insetPx();
+  camera.aspect = W / (Hh + pb);
+  if (pb) camera.setViewOffset(W, Hh + pb, 0, pb, W, Hh); else camera.clearViewOffset();
+  camera.updateProjectionMatrix(); renderer.setSize(W, Hh, false);
+}
+function fitDist(h, w, fov) {   // distance that fits h x w metres into the visible part of the view
+  const Hh = innerHeight, pb = insetPx(), t = Math.tan(fov / 2 * D2R);
+  return Math.max(h / 2 / (t * (Hh - pb) / (Hh + pb)), w / 2 / (t * innerWidth / (Hh + pb))) * 1.06;
+}
+let tween = null;
+function goView(v, instant) {
+  let spec = typeof v === 'string' ? VIEWS[v] : v; if (!spec) return false;
+  if (spec.dyn) spec = spec.dyn();
+  if (typeof v === 'string') S.view = v; else S.view = null;
+  if (spec.scene && typeof v === 'string') setScene(spec.scene);
+  const fov = spec.fov || 30;
+  const to = {p: new THREE.Vector3(...spec.p), t: new THREE.Vector3(...spec.t), fov};
+  if (instant) { camera.position.copy(to.p); controls.target.copy(to.t); camera.fov = fov; camera.updateProjectionMatrix(); controls.update(); tween = null; }
+  else tween = {from: {p: camera.position.clone(), t: controls.target.clone(), fov: camera.fov}, to, t0: performance.now(), dur: 650};
+  syncUI(); return true;
+}
+function stepTween(now) {
+  if (!tween) return;
+  const u = smooth(0, 1, (now - tween.t0) / tween.dur);
+  camera.position.lerpVectors(tween.from.p, tween.to.p, u); controls.target.lerpVectors(tween.from.t, tween.to.t, u);
+  camera.fov = tween.from.fov + (tween.to.fov - tween.from.fov) * u; camera.updateProjectionMatrix();
+  if (u >= 1) tween = null;
+}
+function setShadowBox(c, half, dist, size) {
+  const dir = S.scene === 'town' ? lightDir(52.6, 48.8) : lightDir(42, -38);
+  key.position.copy(c).addScaledVector(dir, dist); key.target.position.copy(c); key.target.updateMatrixWorld();
+  const sc = key.shadow.camera; sc.left = -half; sc.right = half; sc.top = half; sc.bottom = -half; sc.near = 0.1; sc.far = dist * 2 + half;
+  sc.updateProjectionMatrix();
+  if (key.shadow.mapSize.x !== size) { key.shadow.mapSize.set(size, size); if (key.shadow.map) { key.shadow.map.dispose(); key.shadow.map = null; } }
+}
+function lightDir(elev, az) { const e = elev * D2R, a = (az + S.light) * D2R; return new THREE.Vector3(Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e)); }
+function applyLights() {
+  const T = S.scene === 'town';
+  if (T) {
+    const c = townBox ? townBox.getCenter(new THREE.Vector3()) : new THREE.Vector3(); c.y = 0;
+    const half = townBox ? Math.max(12, 0.5 * Math.max(townBox.max.x - townBox.min.x, townBox.max.z - townBox.min.z) + 2) : 20 * K;
+    setShadowBox(c, half, 80 * K, 4096);    // sun, fill and sky as in the building viewers (viewer_template3.html)
+    key.intensity = 1.65; key.color.set(0xfff1dc); fill.intensity = 0.45; fill.color.set(0xb9ccff); rim.intensity = 0;
+    hemi.intensity = 0.55; hemi.color.set(0xdfe9ff); hemi.groundColor.set(0x6a5a44);
+  } else {
+    setShadowBox(new THREE.Vector3(center.x, H * 0.5, center.z), 0.75 * H + 0.3 * K, 8 * K, 2048);
+    key.intensity = 1.6; key.color.set(0xfff0de); fill.intensity = 0.3; fill.color.set(0xd9e4ff); rim.intensity = 1.1; hemi.intensity = 0.22;
+    hemi.color.set(0xe3e9f2); hemi.groundColor.set(0x3b362f);
+  }
+  if (T) fill.position.copy(lightDir(26, -123)).multiplyScalar(10); else fill.position.copy(lightDir(18, 75)).multiplyScalar(10);
+  rim.position.copy(lightDir(32, 160)).multiplyScalar(10);
+  key.castShadow = S.shadows;
+  renderer.toneMappingExposure = S.exposure * (T ? 0.8 : 1);   // town: the building viewers' 0.72
+}
+function setScene(s) {
+  S.scene = s === 'town' ? 'town' : 'studio';
+  studio.visible = S.scene === 'studio'; town.visible = S.scene === 'town';
+  document.body.classList.toggle('town', S.scene === 'town');
+  scene.fog = S.scene === 'town' ? new THREE.Fog(0xd9dccf, 110 * K, 420 * K) : null;
+  applyLights(); syncUI();
+}
+
+// ---------------------------------------------------------------- animation
+function selectClip(i) {
+  if (mixer) mixer.stopAllAction();
+  resetPose(); action = null; clipMorphMeshes = new Set(); S.clip = i; S.time = 0;
+  if (i >= 0 && clips[i]) {
+    const c = clips[i].clip;
+    action = mixer.clipAction(c); action.setLoop(S.loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+    action.clampWhenFinished = true; action.play();
+    for (const tr of c.tracks) {
+      const pb = THREE.PropertyBinding.parseTrackName(tr.name);
+      if (pb.propertyName === 'morphTargetInfluences') { const o = THREE.PropertyBinding.findNode(charRoot, pb.nodeName);
+        if (o) o.traverse(x => { if (x.morphTargetInfluences) clipMorphMeshes.add(x); }); }
+    }
+    mixer.update(0);
+  } else S.playing = false;
+  syncUI();
+}
+function setPlaying(p) {
+  if (!action) { S.playing = false; syncUI(); return; }
+  if (p && (action.time >= clips[S.clip].duration - 1e-4) && !S.loop) { action.reset(); action.play(); S.time = 0; }
+  S.playing = p; syncUI();
+}
+function stepAnim(dt) {
+  if (!action) return;
+  if (S.playing) { action.paused = false; mixer.update(dt * S.speed); }
+  else { action.time = Math.min(S.time, Math.max(0, clips[S.clip].duration - 1e-4)); mixer.update(0); }
+  S.time = action.time;
+}
+
+// ---------------------------------------------------------------- UI
+const ui = {};
+function btn(parent, label, onClick, opts = {}) {
+  const b = el('button', '', label); b.type = 'button'; if (opts.title) b.title = opts.title;
+  b.onclick = onClick; parent.appendChild(b); return b;
+}
+function slider(parent, label, min, max, step, get, set, fmtv = v => v.toFixed(2)) {
+  const r = el('label', 'sl'); const s = el('span', '', label); const i = el('input'); const o = el('output');
+  Object.assign(i, {type: 'range', min, max, step}); i.value = get(); o.textContent = fmtv(+i.value); i.setAttribute('aria-label', label);
+  i.oninput = () => { set(+i.value); o.textContent = fmtv(+i.value); };
+  r.append(s, i, o); parent.appendChild(r); return {input: i, out: o, row: r};
+}
+function buildUI() {
+  // camera presets
+  ui.views = {}; const vr = $('#views');
+  Object.keys(VIEWS).forEach((n, i) => { ui.views[n] = btn(vr, n, () => goView(n), {title: `Key ${i + 1}`}); });
+  // scene
+  ui.scenes = {studio: btn($('#scenes'), 'Studio', () => setScene('studio')),
+    town: btn($('#scenes'), townBox ? 'Town' : 'Town (ground only)', () => setScene('town'),
+      {title: townBox ? 'Embedded buildings for RTS scale' : 'No buildings embedded: make_viewer.py --town or --context'})};
+  // shading
+  ui.shading = {}; for (const [k, n] of [['lit', 'Lit'], ['clay', 'Clay'], ['normals', 'Normals'], ['albedo', 'Base colour']])
+    ui.shading[k] = btn($('#shading'), n, () => { S.shading = k; applyShading(); syncUI(); });
+  // toggles
+  const T = $('#toggles'); ui.tog = {};
+  const tog = (k, label, fn, show = true) => { if (!show) return; ui.tog[k] = btn(T, label, () => { S[k] = !S[k]; fn && fn(S[k]); syncUI(); }); };
+  tog('skeleton', 'Skeleton', on => { if (skel) skel.visible = on; }, !!boneList.length);
+  tog('wire', 'Wireframe', () => applyMatParams());
+  tog('shadows', 'Shadows', () => applyLights());
+  tog('ruler', 'Ruler', on => ruler && (ruler.visible = on));
+  tog('turntable', 'Turntable');
+  tog('blink', 'Idle blink', null, !!(BLINK[0] || BLINK[1]));
+  tog('correctives', 'Correctives', null, DRIVERS.length > 0);
+  tog('corrNormals', 'Corr. normals', () => applyCorrNormals(), corrNormals.length > 0);
+  if (ui.tog.corrNormals) ui.tog.corrNormals.title = 'Use the GLB\'s morph-normal deltas on the corr_* shapes (off: ignored, as Blender does; they are wrong after skinning)';
+  // light
+  const L = $('#lightSl');
+  ui.exp = slider(L, 'Exposure', 0.2, 2, 0.01, () => S.exposure, v => { S.exposure = v; applyLights(); });
+  ui.env = slider(L, 'Environment', 0, 2, 0.01, () => S.env, v => { S.env = v; applyMatParams(); });
+  ui.light = slider(L, 'Key angle', -180, 180, 1, () => S.light, v => { S.light = v; applyLights(); }, v => Math.round(v) + '°');
+  // animation
+  const sel = $('#clip'); sel.innerHTML = '';
+  const o0 = el('option', '', clips.length ? '— bind pose (no clip) —' : '— no clips —'); o0.value = -1; sel.appendChild(o0);
+  const groupsC = {};
+  clips.forEach((c, i) => { const g = c.source === 'viewer' ? 'Viewer test clips (procedural)' : `From ${c.source}`;
+    if (!groupsC[g]) { groupsC[g] = el('optgroup'); groupsC[g].label = g; sel.appendChild(groupsC[g]); }
+    const o = el('option', '', `${c.name}  (${c.duration.toFixed(1)} s)`); o.value = i; groupsC[g].appendChild(o); });
+  sel.onchange = () => { selectClip(+sel.value); setPlaying(+sel.value >= 0); };
+  $('#play').onclick = () => setPlaying(!S.playing);
+  const sc = $('#scrub');
+  sc.oninput = () => { if (!action) return; S.playing = false; S.time = +sc.value * clips[S.clip].duration; syncUI(); };
+  const AO = $('#animOpts'); ui.speed = {};
+  for (const sp of [0.25, 0.5, 1, 2]) ui.speed[sp] = btn(AO, sp + '×', () => { S.speed = sp; syncUI(); });
+  ui.loop = btn(AO, 'Loop', () => { S.loop = !S.loop; if (action) action.setLoop(S.loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity); syncUI(); });
+  // face
+  const TR = $('#talkRow');
+  const canTalk = visemeCount() >= 6 || hasARKit();
+  ui.talk = btn(TR, 'Talk demo', () => S.talk ? stopTalk() : startTalk(false), {title: 'A short line with visemes, blinks, brows and a head nod'});
+  ui.talkLoop = btn(TR, 'Loop talk', () => S.talk ? stopTalk() : startTalk(true));
+  if (!canTalk) { ui.talk.disabled = ui.talkLoop.disabled = true; ui.talk.title = 'No viseme or ARKit shapes on this model'; }
+  const vc = visemeCount();
+  TR.appendChild(el('span', 'note', vc ? `${vc}/15 visemes` : (hasARKit() ? 'ARKit mouth fallback' : '')));
+  ui.expr = {};
+  if (hasARKit()) for (const n in EXPR) ui.expr[n] = btn($('#exprs'), n, () => { stopTalk(); applyExpr(n); syncUI(); });
+  else $('#faceSec').querySelector('#exprs').remove();
+  buildPieces(); buildShapes();
+  // tabs
+  const tab = which => { const p = which === 'pieces';
+    $('#tabPieces').classList.toggle('on', p); $('#tabShapes').classList.toggle('on', !p);
+    $('#tabPieces').setAttribute('aria-selected', p); $('#tabShapes').setAttribute('aria-selected', !p);
+    $('#pieces').hidden = !p; $('#shapes').hidden = p; };
+  $('#tabPieces').onclick = () => tab('pieces'); $('#tabShapes').onclick = () => tab('shapes');
+  $('#tabPieces').textContent = `Pieces (${items.length})`;
+  $('#tabShapes').textContent = `Shapes (${morphNames.length})`;
+  $('#fab').onclick = () => { document.body.classList.remove('noui'); layoutCamera(); };
+  $('#mfab').onclick = () => { document.body.classList.toggle('show-right'); syncUI(); layoutCamera(); };
+  addEventListener('keydown', e => {
+    if (e.target.matches && e.target.matches('input[type=search]')) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key.toLowerCase(), vn = Object.keys(VIEWS);
+    if (/^[1-9]$/.test(k) && vn[+k - 1]) goView(vn[+k - 1]);
+    else if (k === ' ') { if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return; e.preventDefault(); setPlaying(!S.playing); }
+    else if (k === 't' && !ui.talk.disabled) ui.talk.click();
+    else if (k === 'k' && ui.tog.skeleton) ui.tog.skeleton.click();
+    else if (k === 'w') ui.tog.wire.click();
+    else if (k === 'h') { document.body.classList.toggle('noui'); layoutCamera(); }
+    else return;
+  });
+}
+const EXPR = {
+  'Neutral': {},
+  'Smile': {mouthSmileLeft: .85, mouthSmileRight: .85, cheekSquintLeft: .45, cheekSquintRight: .45, eyeSquintLeft: .25, eyeSquintRight: .25, mouthDimpleLeft: .3, mouthDimpleRight: .3},
+  'Toothy smile': {mouthSmileLeft: .8, mouthSmileRight: .8, mouthUpperUpLeft: .45, mouthUpperUpRight: .45, jawOpen: .1, cheekSquintLeft: .4, cheekSquintRight: .4, eyeSquintLeft: .2, eyeSquintRight: .2},
+  'Battle cry': {jawOpen: .75, mouthStretchLeft: .5, mouthStretchRight: .5, browDownLeft: .8, browDownRight: .8, noseSneerLeft: .6, noseSneerRight: .6, mouthUpperUpLeft: .5, mouthUpperUpRight: .5, eyeSquintLeft: .4, eyeSquintRight: .4},
+  'Angry': {browDownLeft: 1, browDownRight: 1, eyeSquintLeft: .5, eyeSquintRight: .5, noseSneerLeft: .4, noseSneerRight: .4, mouthPressLeft: .5, mouthPressRight: .5, mouthFrownLeft: .4, mouthFrownRight: .4},
+  'Surprise': {browInnerUp: .9, browOuterUpLeft: .8, browOuterUpRight: .8, eyeWideLeft: .8, eyeWideRight: .8, jawOpen: .45, mouthFunnel: .3},
+  'Sad': {browInnerUp: .8, mouthFrownLeft: .7, mouthFrownRight: .7, mouthShrugLower: .4, eyeLookDownLeft: .3, eyeLookDownRight: .3},
+  'Wink': {eyeBlinkLeft: 1, mouthSmileLeft: .6, cheekSquintLeft: .5},
+  'Eyes closed': {eyeBlinkLeft: 1, eyeBlinkRight: 1},
+  'Look left': {eyeLookOutLeft: .8, eyeLookInRight: .8},
+};
+let curExpr = 'Neutral';
+function applyExpr(n) { const e = EXPR[n]; if (!e) return false; clearMorphs(); for (const k in e) if (morphCount[k]) setMorph(k, e[k]); curExpr = n; return true; }
+
+function buildPieces() {
+  const root = $('#pieces'); root.innerHTML = '';
+  if (matVariants.names.length) {
+    const g = el('div', 'grp'); g.appendChild(el('div', 'grp-h', 'Material variant'));
+    const s = el('select'); s.setAttribute('aria-label', 'Material variant');
+    [['-1', 'default'], ...matVariants.names.map((n, i) => [String(i), n])].forEach(([v, n]) => { const o = el('option', '', n); o.value = v; s.appendChild(o); });
+    s.onchange = () => setMatVariant(+s.value); g.appendChild(s); root.appendChild(g); ui.matVar = s;
+  }
+  if (!items.length) { root.appendChild(el('p', 'note', 'No mesh nodes.')); return; }
+  if (LOOKS.names.length) {
+    const g = el('div', 'grp'); g.appendChild(el('div', 'grp-h', 'Look'));
+    ui.looks = {};
+    for (const n of LOOKS.names) {
+      const r = el('label', 'item'), i = el('input'); i.type = 'radio'; i.name = 'look'; i.checked = n === LOOKS.cur;
+      i.onchange = () => setLook(n);
+      const tr = items.filter(it => it.look === n).reduce((a, it) => a + it.tris, 0);
+      r.append(i, el('span', '', n === 'helm' ? 'helm (game)' : n === 'bare' ? 'bare head (cutscene)' : n), el('small', '', '+' + fmt(tr)));
+      ui.looks[n] = i; g.appendChild(r);
+    }
+    root.appendChild(g);
+  }
+  groups.forEach((G, gi) => {
+    const g = el('div', 'grp'), h = el('div', 'grp-h');
+    h.append(el('span', '', G.name), el('small', 'cnt', `${G.items.length}`));
+    if (!G.radio && G.items.length > 1) {
+      btn(h, 'All', () => { G.items.forEach(it => it.obj.visible = true); syncPieces(); });
+      btn(h, 'None', () => { G.items.forEach(it => it.obj.visible = false); syncPieces(); });
+    }
+    g.appendChild(h);
+    if (G.radio && G.none) {   // 'none' option (bald / no beard)
+      const r = el('label', 'item'), i = el('input'); i.type = 'radio'; i.name = 'grp' + gi;
+      i.onchange = () => { G.items.forEach(x => x.obj.visible = false); syncPieces(); };
+      G.noneInput = i; r.append(i, el('span', '', 'none'), el('small', '', '')); g.appendChild(r);
+    }
+    for (const it of G.items) {
+      const r = el('label', 'item'), i = el('input');
+      i.type = G.radio ? 'radio' : 'checkbox'; if (G.radio) i.name = 'grp' + gi;
+      i.onchange = () => { if (G.radio) G.items.forEach(x => x.obj.visible = x === it); else it.obj.visible = i.checked; syncPieces(); };
+      const t = el('span', '', it.label); t.title = `${it.name}${it.file.role === 'piece' ? ' — ' + it.file.label : ''}\n` +
+        Object.entries(it.ud).filter(([k]) => /^(slot|rts_|option|label|default)/.test(k)).map(([k, v]) => `${k}: ${v}`).join('\n');
+      r.append(i, t, el('small', '', fmt(it.tris))); it.input = i; g.appendChild(r);
+    }
+    root.appendChild(g);
+  });
+  syncPieces();
+}
+function syncPieces() { for (const it of items) if (it.input) it.input.checked = it.obj.visible;
+  for (const G of groups) if (G.noneInput) G.noneInput.checked = !G.items.some(x => x.obj.visible); updateStats(); }
+
+function buildShapes() {
+  const root = $('#morphs'); root.innerHTML = '';
+  if (!morphNames.length) { $('#shapeNote').textContent = 'This model has no morph targets.'; return; }
+  const shared = morphNames.filter(n => morphCount[n] > 1).length;
+  $('#shapeNote').textContent = `${morphNames.length} shapes on ${morphMeshes.length} meshes; a slider drives every mesh that has that name (×N)` +
+    (DRIVERS.length ? '; correctives are driven from joint angles' : '') +
+    (corrNormals.length ? ` (their normal deltas are ignored unless Corr. normals is on).` : '.');
+  const used = new Set(), bip = new Set();
+  const rowsFor = ns => { const rows = [];
+    for (const n of ns) { if (bip.has(n)) continue;
+      const m = /^(.*)_(neg|pos)$/.exec(n);
+      if (m && morphCount[m[1] + '_neg'] && morphCount[m[1] + '_pos']) { bip.add(m[1] + '_neg'); bip.add(m[1] + '_pos'); rows.push({label: m[1], bi: [m[1] + '_neg', m[1] + '_pos']}); }
+      else rows.push({label: n}); }
+    return rows; };
+  for (const [gname, test] of SHAPE_GROUPS) {
+    const ns = morphNames.filter(n => !used.has(n) && test(n)); if (!ns.length) continue; ns.forEach(n => used.add(n));
+    const d = el('details'); const sm = el('summary'); sm.append(gname + ' ', el('span', 'cnt', `(${ns.length})`)); d.appendChild(sm);
+    const auto = /^Correctives/.test(gname);
+    for (const r of rowsFor(ns)) {
+      const n = r.label, lbl = el('label', 'sl' + (auto ? ' auto' : '')), s = el('span'), i = el('input'), o = el('output');
+      const cnt = r.bi ? Math.max(morphCount[r.bi[0]], morphCount[r.bi[1]]) : morphCount[n];
+      s.append(n); if (cnt > 1) s.appendChild(el('small', '', '×' + cnt));
+      s.title = n + (r.bi ? ` (${r.bi[0]} ← → ${r.bi[1]})` : '') + `\n${cnt} mesh${cnt > 1 ? 'es' : ''}: ` +
+        morphMeshes.filter(x => x.mesh.morphTargetDictionary[r.bi ? r.bi[1] : n] !== undefined).map(x => x.mesh.name).join(', ');
+      Object.assign(i, {type: 'range', min: r.bi ? -1 : 0, max: 1, step: 0.01}); i.setAttribute('aria-label', n);
+      if (auto) { i.disabled = true; i.title = 'Driven from the joint angles (toggle Correctives)'; }
+      i.oninput = () => { const v = +i.value; if (r.bi) { base[r.bi[0]] = Math.max(0, -v); base[r.bi[1]] = Math.max(0, v); } else base[n] = v; o.textContent = v.toFixed(2); };
+      lbl.append(s, i, o); d.appendChild(lbl);
+      const rec = {input: i, out: o, bi: r.bi, row: lbl, auto, key: n};
+      rowsByName[n] = rec; if (r.bi) { rowsByName[r.bi[0]] = rec; rowsByName[r.bi[1]] = rec; }
+      syncRow(n);
+    }
+    if (/^(Customise: face|Brows)$/.test(gname)) d.open = true;
+    root.appendChild(d);
+  }
+  $('#shapeFilter').oninput = e => { const q = e.target.value.trim().toLowerCase();
+    root.querySelectorAll('details').forEach(d => { let any = false;
+      d.querySelectorAll('.sl').forEach(r => { const ok = !q || r.textContent.toLowerCase().includes(q); r.hidden = !ok; any = any || ok; });
+      d.hidden = !any; if (q && any) d.open = true; }); };
+  $('#shapeReset').onclick = () => { stopTalk(); clearMorphs(); curExpr = 'Neutral'; syncUI(); };
+}
+let lastCorrUI = 0;
+function uiTick(now) {
+  if (action) {
+    const dur = clips[S.clip].duration || 1, sc = $('#scrub');
+    if (document.activeElement !== sc) sc.value = S.time / dur;
+    $('#tl').textContent = `${S.time.toFixed(2)} / ${dur.toFixed(2)} s`;
+  }
+  if (now - lastCorrUI > 120) { lastCorrUI = now;
+    for (const d of DRIVERS) { const r = rowsByName[d.morph]; if (r && r.auto) { const v = overlay[d.morph] || 0; r.input.value = v; r.out.textContent = v.toFixed(2); } }
+  }
+}
+let statsCache = {};
+function updateStats() {
+  let tris = 0, n = 0;
+  for (const it of items) if (isShown(it.obj)) { tris += it.tris; n++; }
+  statsCache.tris = tris;
+  const shapes = morphNames.length, corr = morphNames.filter(x => /^corr?_/.test(x)).length;
+  $('#stats').textContent = `${fmt(tris)} tris shown · ${n}/${items.length} meshes · ${statsCache.calls || '–'} draws · ` +
+    `${boneList.length} bones · ${shapes} shapes${corr ? ` (${corr} corr)` : ''} · ${clips.filter(c => c.source !== 'viewer').length} GLB clips · ${H.toFixed(2)} m tall`;
+}
+function syncUI() {
+  if (!ui.views) return;
+  for (const n in ui.views) ui.views[n].classList.toggle('on', S.view === n);
+  for (const k in ui.scenes) ui.scenes[k].classList.toggle('on', S.scene === k);
+  for (const k in ui.shading) ui.shading[k].classList.toggle('on', S.shading === k);
+  for (const k in ui.tog) ui.tog[k].setAttribute('aria-pressed', !!S[k]);
+  for (const k in ui.speed) ui.speed[k].classList.toggle('on', S.speed === +k);
+  ui.loop.setAttribute('aria-pressed', S.loop);
+  for (const n in ui.expr) ui.expr[n].classList.toggle('on', curExpr === n && !S.talk);
+  const pl = $('#play'); pl.disabled = !action; pl.textContent = S.playing ? 'Pause' : 'Play'; pl.setAttribute('aria-label', pl.textContent);
+  $('#scrub').disabled = !action; if (!action) $('#tl').textContent = '–';
+  $('#clip').value = String(S.clip);
+  ui.talk.classList.toggle('on', !!S.talk && !S.talk.loop); ui.talkLoop.classList.toggle('on', !!S.talk && !!S.talk.loop);
+  ui.talk.textContent = S.talk && !S.talk.loop ? 'Stop talk' : 'Talk demo';
+  if (skel) skel.visible = S.skeleton;
+  $('#mfab').textContent = document.body.classList.contains('show-right') ? 'Controls' : 'Pieces & shapes';
+  if (ruler) ruler.visible = S.ruler;
+}
+
+// ---------------------------------------------------------------- main loop
+const clock = new THREE.Clock();
+let lastStats = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 0.1);
+  if (ready) update(dt, now);
+  controls.update();
+  renderer.render(scene, camera);
+  undoHead();
+  if (ready && now - lastStats > 500) { lastStats = now; statsCache.calls = renderer.info.render.calls; updateStats(); }
+}
+function update(dt, now) {
+  stepTween(now);
+  stepAnim(dt);
+  if (S.turntable) charRoot.rotation.y += dt * 0.45;
+  upd();
+  for (const k in overlay) overlay[k] = 0;
+  blinkOverlay(now);
+  talkOverlay(talkTime());
+  driveCorrectives();
+  applyMorphs();
+  applyHead();
+  updateJoints();
+  uiTick(now);
+}
+function finishSetup() {
+  captureRest();
+  mixer = new THREE.AnimationMixer(charRoot);
+  mixer.addEventListener('finished', () => { S.playing = false; syncUI(); });
+  const vclips = makeViewerClips();
+  clips.push(...vclips);
+  // morph names: the mesh with the most targets sets the order
+  const byCount = [...morphMeshes].sort((a, b) => b.idx.length - a.idx.length), seen = new Set();
+  for (const m of byCount) for (const [, n] of m.idx) if (!seen.has(n)) { seen.add(n); morphNames.push(n); }
+  resolveFace();
+  buildGroups();
+  buildLooks();
+  measure();
+  buildViews();
+  { const f = studio.userData.floor, r = Math.max(1.2, 1.35 * H); f.scale.set(r, r, 1); f.position.set(center.x, 0.001, center.z); }
+  makeSkeletonView(); makeRuler();
+  buildUI(); layoutCamera();
+  if (CFG.kit) kitSetup();                 // dress-up mode (make_viewer.py --kit)
+  applyShading(); applyCorrNormals();
+  if (corrNormals.length) console.warn(`${corrNormals.length} corr_* morph targets carry normal deltas: ignored by default (toggle Corr. normals)`);
+  setScene('studio');
+  goView('Full body', true);
+  canvas.focus({preventScroll: true});
+}
+
+// ---------------------------------------------------------------- dress-up (modular kit, make_viewer.py --kit)
+// CFG.kit: the kit manifest for this body (scripts/kit_manifest.py): pieces by id (slot, occupies, requires, cover
+// bitsets per body region), outfits, the hide threshold. The body GLB's body mesh has one primitive per region
+// (mesh extras rts_regions); a region is hidden when the worn pieces together cover >= hideT of its vertices.
+const KIT = {worn: new Set(), items: {}, regions: {}, parts: {}, bits: {}, ui: {}};
+function kitBits(b64, n) {
+  const raw = b64decode(b64), out = new Uint8Array(n);
+  for (let i = 0; i < n; i++) out[i] = (raw[i >> 3] >> (7 - (i & 7))) & 1;
+  return out;
+}
+function kitSetup() {
+  const K = CFG.kit;
+  for (const it of items) { const id = it.file.kit; if (id) (KIT.items[id] = KIT.items[id] || []).push(it); }
+  const bodyIt = items.find(it => it.file.role === 'character' && it.name === K.bodyMesh);
+  if (bodyIt) bodyIt.meshes.forEach((m, k) => { const r = (m.userData.rts_regions || [])[k]; if (r) KIT.regions[r] = m; });
+  for (const it of items) if (it.file.role === 'character' && it.name !== K.bodyMesh) KIT.parts[it.name.replace(K.kind + '_', '')] = it;
+  for (const [id, p] of Object.entries(K.pieces)) { KIT.bits[id] = {};
+    for (const [r, b] of Object.entries(p.cover_bits || {})) if (K.regions[r]) KIT.bits[id][r] = kitBits(b, K.regions[r]); }
+  // tab + panel
+  const tabs = document.querySelector('#right .tabs'), tb = el('button', '', 'Dress-up'); tb.type = 'button'; tb.id = 'tabKit';
+  tb.setAttribute('role', 'tab'); tabs.appendChild(tb);
+  const panel = el('div'); panel.id = 'kit'; panel.setAttribute('role', 'tabpanel'); panel.hidden = true;
+  $('#right').appendChild(panel);
+  const show = on => { panel.hidden = !on; tb.classList.toggle('on', on); tb.setAttribute('aria-selected', on);
+    if (on) { $('#pieces').hidden = true; $('#shapes').hidden = true; $('#tabPieces').classList.remove('on'); $('#tabShapes').classList.remove('on'); } };
+  tb.onclick = () => show(true);
+  $('#tabPieces').addEventListener('click', () => show(false)); $('#tabShapes').addEventListener('click', () => show(false));
+  const og = el('div', 'grp'); og.appendChild(el('div', 'grp-h', 'Outfits'));
+  const ob = el('div', 'row'); og.appendChild(ob); KIT.ui.outfits = {};
+  for (const [n, o] of Object.entries(K.outfits)) { KIT.ui.outfits[n] = btn(ob, n, () => { kitOutfit(n); }, {title: o.doc}); }
+  panel.appendChild(og);
+  KIT.ui.note = el('p', 'note', ''); panel.appendChild(KIT.ui.note);
+  const bySlot = {};
+  for (const [id, p] of Object.entries(K.pieces)) (bySlot[p.slot] = bySlot[p.slot] || []).push(id);
+  const slots = Object.keys(bySlot).sort((a, b) => (K.slots[a] || {}).layer - (K.slots[b] || {}).layer || a.localeCompare(b));
+  KIT.ui.inputs = {};
+  for (const sl of slots) {
+    const g = el('div', 'grp'), h = el('div', 'grp-h'); h.append(el('span', '', sl), el('small', 'cnt', 'layer ' + ((K.slots[sl] || {}).layer ?? '')));
+    g.appendChild(h);
+    const mk = (id, label) => { const r = el('label', 'item'), i = el('input'); i.type = 'radio'; i.name = 'kit_' + sl;
+      i.onchange = () => { if (id) kitWear(id); else bySlot[sl].forEach(x => KIT.worn.delete(x)); kitApply(); };
+      const tris = id && KIT.items[id] ? KIT.items[id].reduce((s, it) => s + it.tris, 0) : 0;
+      r.append(i, el('span', '', label), el('small', '', id ? fmt(tris) : '')); g.appendChild(r); return i; };
+    KIT.ui.inputs['none:' + sl] = mk(null, 'none');
+    for (const id of bySlot[sl]) KIT.ui.inputs[id] = mk(id, id + (K.pieces[id].set ? ' · ' + K.pieces[id].set : ''));
+    panel.appendChild(g);
+  }
+  kitOutfit(K.default || 'knight');
+  const i = clips.findIndex(c => /^idle/.test(c.name)); if (i >= 0) { selectClip(i); setPlaying(true); }
+}
+function kitWear(id) {
+  const P = CFG.kit.pieces, p = P[id]; if (!p) return false;
+  const slots = new Set([p.slot, ...(p.occupies || [])]);
+  for (const w of [...KIT.worn]) { const q = P[w]; if (slots.has(q.slot) || (q.occupies || []).some(s => slots.has(s)) || [...slots].some(s => (q.occupies || []).includes(s))) KIT.worn.delete(w); }
+  KIT.worn.add(id); return true;
+}
+function kitOutfit(n) {
+  const o = CFG.kit.outfits[n]; if (!o) return false;
+  KIT.worn = new Set(o.pieces.filter(id => CFG.kit.pieces[id])); KIT.outfit = n; kitApply(); return true;
+}
+function kitApply() {
+  const K = CFG.kit, P = K.pieces;
+  // drop pieces whose requirements are not worn (e.g. the plume without the helmet)
+  let changed = true; while (changed) { changed = false;
+    for (const id of [...KIT.worn]) if ((P[id].requires || []).some(r => !KIT.worn.has(r))) { KIT.worn.delete(id); changed = true; } }
+  for (const [id, its] of Object.entries(KIT.items)) its.forEach(it => it.obj.visible = KIT.worn.has(id));
+  const hidden = [], cover = {};
+  for (const [r, n] of Object.entries(K.regions)) {
+    const u = new Uint8Array(n);
+    for (const id of KIT.worn) { const b = KIT.bits[id] && KIT.bits[id][r]; if (b) for (let i = 0; i < n; i++) u[i] |= b[i]; }
+    let c = 0; for (let i = 0; i < n; i++) c += u[i];
+    cover[r] = n ? c / n : 0;
+    const hide = cover[r] >= K.hideT; if (KIT.regions[r]) KIT.regions[r].visible = !hide; if (hide) hidden.push(r);
+  }
+  const hp = new Set(); for (const id of KIT.worn) (P[id].hides_parts || []).forEach(x => hp.add(x));
+  KIT.partHidden = KIT.partHidden || new Set();
+  for (const [n, it] of Object.entries(KIT.parts)) {
+    const h = hp.has(n) || hp.has(n.split('_')[0]);
+    if (h && it.obj.visible) { it.obj.visible = false; KIT.partHidden.add(n); }
+    else if (!h && KIT.partHidden.has(n)) { it.obj.visible = true; KIT.partHidden.delete(n); } }
+  KIT.hidden = hidden; KIT.cover = cover;
+  for (const [k, i] of Object.entries(KIT.ui.inputs || {})) {
+    if (k.startsWith('none:')) { const sl = k.slice(5); i.checked = ![...KIT.worn].some(id => P[id].slot === sl); }
+    else i.checked = KIT.worn.has(k);
+  }
+  for (const [n, b] of Object.entries(KIT.ui.outfits || {})) b.classList.toggle('on', KIT.outfit === n &&
+    CFG.kit.outfits[n].pieces.filter(id => P[id]).every(id => KIT.worn.has(id)) && KIT.worn.size === CFG.kit.outfits[n].pieces.filter(id => P[id]).length);
+  if (KIT.ui.note) KIT.ui.note.textContent = `${KIT.worn.size} pieces worn · body regions hidden: ${hidden.length}/${Object.keys(K.regions).length}` +
+    (hidden.length ? ` (${hidden.join(', ')})` : '') + (hp.size ? ` · parts hidden: ${[...hp].join(', ')}` : '');
+  syncPieces();
+}
+function kitSet(o, warn) {
+  if (typeof o === 'string') o = {outfit: o};
+  if (o.outfit && !kitOutfit(o.outfit)) warn.push('no outfit ' + o.outfit);
+  for (const id of asList(o.equip)) if (!kitWear(id)) warn.push('no kit piece ' + id);
+  for (const id of asList(o.unequip)) KIT.worn.delete(id);
+  kitApply();
+}
+function kitState() {
+  return {outfit: KIT.outfit, worn: [...KIT.worn].sort(), hiddenRegions: KIT.hidden,
+    cover: Object.fromEntries(Object.entries(KIT.cover || {}).map(([r, c]) => [r, +c.toFixed(3)])),
+    regionMeshes: Object.keys(KIT.regions).length, pieceFiles: Object.keys(KIT.items).length};
+}
+
+// ---------------------------------------------------------------- scripting API (headless shots, tests)
+function findClip(q) {
+  if (q == null || q === '' || q === 'none' || q === -1) return -1;
+  if (typeof q === 'number') return q < clips.length ? q : -2;
+  const l = String(q).toLowerCase();
+  let i = clips.findIndex(c => c.name === q); if (i < 0) i = clips.findIndex(c => c.name.toLowerCase() === l);
+  if (i < 0) i = clips.findIndex(c => c.name.toLowerCase().startsWith(l)); if (i < 0) i = clips.findIndex(c => c.name.toLowerCase().includes(l));
+  return i < 0 ? -2 : i;
+}
+function parseMorphs(m, warn) {
+  const out = {}; let expr = null;
+  if (!m) return {out, expr};
+  if (typeof m === 'string') {
+    for (const part of m.split(/[,;]+/).map(s => s.trim()).filter(Boolean)) {
+      const kv = part.split(/[=:]/);
+      if (kv.length === 1) { const e = Object.keys(EXPR).find(x => x.toLowerCase() === part.toLowerCase().replace(/^@/, '')); if (e) expr = e; else warn.push('unknown expression ' + part); }
+      else out[kv[0].trim()] = +kv[1];
+    }
+  } else Object.assign(out, m);
+  return {out, expr};
+}
+function matchItems(list, warn) {
+  const res = new Set();
+  for (const q of list) { const l = String(q).toLowerCase(); let hit = false;
+    for (const it of items) if (it.name.toLowerCase() === l || it.label.toLowerCase() === l || it.group.toLowerCase() === l) { res.add(it); hit = true; }
+    if (!hit) for (const it of items) if (it.name.toLowerCase().includes(l)) { res.add(it); hit = true; }
+    if (!hit) warn.push('no mesh matches ' + q); }
+  return res;
+}
+const asList = v => v == null ? [] : Array.isArray(v) ? v : String(v).split(',').map(s => s.trim()).filter(Boolean);
+let readyResolve; const readyPromise = new Promise(r => readyResolve = r);
+window.LD = {
+  ready: readyPromise,
+  async set(o = {}) {
+    await readyPromise; const warn = [];
+    if (o.ui === false) document.body.classList.add('noui', 'clean'); if (o.ui === true) document.body.classList.remove('noui', 'clean');
+    if (o.mobileRight != null) document.body.classList.toggle('show-right', !!o.mobileRight);
+    layoutCamera();
+    if (o.captionAlways != null) S.captionAlways = !!o.captionAlways;
+    if (o.shading && ui.shading[o.shading]) { S.shading = o.shading; applyShading(); }
+    for (const k of ['skeleton', 'wire', 'shadows', 'ruler', 'blink', 'turntable', 'correctives', 'corrNormals'])
+      if (o[k] != null) { S[k] = !!o[k]; }
+    if (o.corrNormals != null) applyCorrNormals();
+    if (o.exposure != null) S.exposure = +o.exposure; if (o.env != null) S.env = +o.env; if (o.light != null) S.light = +o.light;
+    applyLights(); applyMatParams();
+    if (o.yaw != null) charRoot.rotation.y = +o.yaw * D2R;
+    if (o.only != null) { const keep = matchItems(asList(o.only), warn); items.forEach(it => it.obj.visible = keep.has(it)); }
+    if (o.show != null) matchItems(asList(o.show), warn).forEach(it => { const G = groups.find(g => g.name === it.group);
+      if (G && G.radio) G.items.forEach(x => x.obj.visible = false); it.obj.visible = true; });
+    if (o.hide != null) matchItems(asList(o.hide), warn).forEach(it => it.obj.visible = false);
+    if (o.variant) for (const [g, v] of Object.entries(o.variant)) { const G = groups.find(x => x.name.toLowerCase() === g.toLowerCase());
+      const it = G && G.items.find(x => x.label.toLowerCase() === String(v).toLowerCase() || x.name.toLowerCase() === String(v).toLowerCase());
+      if (it) G.items.forEach(x => x.obj.visible = x === it);
+      else if (G && G.none && String(v).toLowerCase() === 'none') G.items.forEach(x => x.obj.visible = false);
+      else warn.push(`no variant ${g}=${v}`); }
+    if (o.look != null && !setLook(o.look)) warn.push('no look ' + o.look);
+    if (o.kit != null) kitSet(o.kit, warn);
+    if (o.matVariant != null) { const i = matVariants.names.indexOf(o.matVariant); if (i < 0 && o.matVariant !== 'default') warn.push('no material variant ' + o.matVariant); setMatVariant(i); if (ui.matVar) ui.matVar.value = String(i); }
+    syncPieces();
+    if (o.clip !== undefined) { const i = findClip(o.clip); if (i === -2) { warn.push('no clip ' + o.clip); } else selectClip(i); }
+    if (o.time != null && action) { S.time = Math.max(0, Math.min(+o.time, clips[S.clip].duration)); }
+    if (o.playing != null) setPlaying(!!o.playing); else if (o.clip !== undefined) setPlaying(false);
+    if (action) { stepAnim(0); upd(); }        // pose now, so a dynamic camera (Hands) frames it
+    if (o.morphs !== undefined || o.expr !== undefined) {
+      if (o.reset !== false) { clearMorphs(); curExpr = 'Neutral'; }
+      const {out, expr} = parseMorphs(o.morphs, warn); const e = o.expr || expr;
+      if (e) { if (!applyExpr(Object.keys(EXPR).find(x => x.toLowerCase() === String(e).toLowerCase()) || e)) warn.push('unknown expression ' + e); }
+      for (const [k, v] of Object.entries(out)) { if (morphCount[k]) setMorph(k, v); else warn.push('no shape ' + k); }
+    }
+    if (o.talk !== undefined) { if (o.talk === null || o.talk === false) stopTalk();
+      else if (visemeCount() < 6 && !hasARKit()) warn.push('no viseme / ARKit shapes: no talk demo'); else S.talk = {paused: +o.talk, t0: 0}; }
+    if (typeof o.view === 'string' && !VIEWS[o.view]) { const l = o.view.toLowerCase().replace(/[^a-z0-9]/g, '');
+      o.view = Object.keys(VIEWS).find(n => n.toLowerCase().replace(/[^a-z0-9]/g, '') === l) ||
+        Object.keys(VIEWS).find(n => n.toLowerCase().replace(/[^a-z0-9]/g, '').startsWith(l)) || o.view; }
+    if (o.talkPlay) startTalk(o.talkPlay === 'loop');
+    if (o.view) { if (!goView(o.view, true)) warn.push('no view ' + JSON.stringify(o.view)); }
+    if (o.scene) setScene(o.scene);
+    if (o.fov) { camera.fov = +o.fov; camera.updateProjectionMatrix(); }
+    if (o.tab) (o.tab === 'shapes' ? $('#tabShapes') : $('#tabPieces')).click();
+    if (o.filter != null) { const f = $('#shapeFilter'); f.value = o.filter; f.dispatchEvent(new Event('input')); }
+    if (o.mobileRight != null) { document.body.classList.toggle('show-right', !!o.mobileRight); }
+    layoutCamera();
+    syncUI();
+    for (let i = 0; i < (o.frames || 3); i++) await nextFrame();
+    statsCache.calls = renderer.info.render.calls; updateStats();
+    return {warnings: warn, view: S.view, clip: S.clip >= 0 ? clips[S.clip].name : null, time: +S.time.toFixed(3), playing: S.playing,
+      talk: S.talk ? +(talkTime() || 0).toFixed(3) : null, caption: $('#caption').hidden ? '' : $('#caption').textContent};
+  },
+  info(detail) {
+    const r = {ready, title: CFG.title, height: +H.toFixed(3), trisShown: statsCache.tris, drawCalls: renderer.info.render.calls,
+      bones: boneList.length, meshes: items.map(it => ({name: it.name, label: it.label, group: it.group, visible: isShown(it.obj), tris: it.tris,
+        skinned: it.meshes.some(m => m.isSkinnedMesh), morphs: it.meshes.reduce((s, m) => s + (m.morphTargetInfluences ? m.morphTargetInfluences.length : 0), 0), file: it.file.label})),
+      shapes: morphNames.length, sharedShapes: morphNames.filter(n => morphCount[n] > 1).length,
+      clips: clips.map(c => ({name: c.name, duration: +c.duration.toFixed(3), source: c.source})), views: Object.keys(VIEWS),
+      visemes: Object.fromEntries(OVR.map(c => [c, VIS[c]])), blink: BLINK, head: HEAD && HEAD.name, correctives: DRIVERS.length,
+      materialVariants: matVariants.names, corrNormalTargets: corrNormals.length, townBox: townBox && [townBox.min.toArray().map(v => +v.toFixed(1)), townBox.max.toArray().map(v => +v.toFixed(1))],
+      errors: window.__ERRORS__};
+    if (CFG.kit) r.kit = kitState();
+    if (detail) r.influences = morphMeshes.map(({mesh, idx}) => ({mesh: mesh.name,
+      nonzero: Object.fromEntries(idx.filter(([i]) => mesh.morphTargetInfluences[i] > 1e-3).map(([i, n]) => [n, +mesh.morphTargetInfluences[i].toFixed(3)]))}));
+    if (detail) r.morphNames = morphNames;
+    if (detail) { upd(); r.bonesWorld = Object.fromEntries(boneList.map(b => { const p = b.getWorldPosition(new THREE.Vector3()), q = b.getWorldQuaternion(new THREE.Quaternion());
+      return [b.name, [...p.toArray(), ...q.toArray()].map(v => +v.toFixed(5))]; })); }
+    return r;
+  },
+};
+function applyHash() {   // e.g. viewer.html#view=Face&expr=Smile&clip=Walk
+  if (!location.hash || location.hash.length < 2) return;
+  const p = new URLSearchParams(location.hash.slice(1)), o = {};
+  for (const [k, v] of p) o[k] = /^(skeleton|wire|shadows|ruler|blink|turntable|ui)$/.test(k) ? v !== '0' && v !== 'false' : v;
+  if (o.time != null) o.time = +o.time; if (o.talk != null) o.talk = +o.talk;
+  LD.set(o);
+}
+
+requestAnimationFrame(frame);
+addEventListener('resize', layoutCamera);
+loadAll().then(async () => {
+  ready = true; await nextFrame(); await nextFrame();
+  setStatus(''); window.__READY__ = true; readyResolve(); applyHash();
+}).catch(e => { console.error(e); fail(e.message || String(e)); });
+</script>
+</body>
+</html>

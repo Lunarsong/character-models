@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__TITLE__</title>
+<style>
+:root{
+  --bg-top:#aeb6c0; --bg-bottom:#e2e4e1; --ink:#1d2430; --muted:#566170;
+  --panel:rgba(246,247,246,.86); --line:rgba(29,36,48,.14); --accent:#2d4fbf; --accent-ink:#fff; --focus:#c8962e;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg-top:#141b26; --bg-bottom:#2b3441; --ink:#e8ecf0; --muted:#a2acb8;
+    --panel:rgba(22,28,37,.84); --line:rgba(232,236,240,.14); --accent:#7d9bff; --accent-ink:#0e1420; --focus:#e6b24a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg-top:#141b26; --bg-bottom:#2b3441; --ink:#e8ecf0; --muted:#a2acb8;
+  --panel:rgba(22,28,37,.84); --line:rgba(232,236,240,.14); --accent:#7d9bff; --accent-ink:#0e1420; --focus:#e6b24a;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{overflow:hidden;color:var(--ink);font:14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:linear-gradient(180deg,var(--bg-top),var(--bg-bottom))}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+.panel{position:fixed;z-index:2;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--line);border-radius:12px;padding:12px 14px;max-height:calc(100% - 32px);overflow:auto}
+#left{left:16px;top:16px;width:270px}
+#right{right:16px;top:16px;width:300px}
+h1{font-size:17px;margin:0 0 2px}
+.sub{color:var(--muted);font-size:12.5px;margin:0 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.lbl{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}
+button{font:inherit;font-size:13px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:8px;
+  padding:5px 9px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+details{border-top:1px solid var(--line);padding:4px 0}
+summary{cursor:pointer;font-weight:600;font-size:13px;padding:4px 0}
+.sl{display:grid;grid-template-columns:1fr 90px 34px;align-items:center;gap:6px;font-size:12px;margin:2px 0}
+.sl span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl input{width:100%}
+.stats{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:6px;margin:0 0 8px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 8px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 8px}
+.dot{width:11px;height:11px;border-radius:50%;border:1px solid var(--line);flex:none}
+.pick{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:6px;font-size:12px;margin:3px 0}
+select{font:inherit;font-size:12.5px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 6px;width:100%}
+.sl.cs{grid-template-columns:1fr 104px 40px}
+#recipe{width:100%;height:96px;font:11px/1.3 ui-monospace,Menlo,monospace;margin-top:6px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:6px}
+#status{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:2;font-size:12.5px;color:var(--muted)}
+@media (max-width:760px){
+  #left{left:16px;right:16px;top:auto;bottom:16px;width:auto;max-height:42%}
+  #right{display:none}
+}
+</style>
+</head>
+<body>
+<div class="panel" id="left">
+  <h1>__TITLE__</h1>
+  <p class="sub">__SUB__</p>
+  <div class="lbl">View</div>
+  <div class="row" id="views"></div>
+  <div class="lbl">Pose</div>
+  <div class="row" id="poses"></div>
+  <div class="lbl">Expression</div>
+  <div class="row" id="exprs"></div>
+  <div class="lbl">Show</div>
+  <div class="row" id="toggles"></div>
+  <div class="stats" id="stats"></div>
+</div>
+<div class="panel" id="right">
+  <div class="tabs" id="tabs" hidden><button type="button" class="on" data-tab="shapes">Face shapes</button><button type="button" data-tab="cust">Customise</button></div>
+  <div id="tab-shapes"><h1>Face shapes</h1><p class="sub">52 ARKit blendshapes + 15 OVR visemes + extra shapes, driven on every part that has them.</p><div id="morphs"></div></div>
+  <div id="tab-cust" hidden>
+    <h1>Customise</h1>
+    <p class="sub">cust_* morph targets (MakeHuman CC0 face / body targets), swappable parts and material variants. Expressions stay live on top.</p>
+    <div class="row"><button type="button" id="c-rand">Randomise</button><button type="button" id="c-reset">Reset</button><button type="button" id="c-copy">Copy recipe</button></div>
+    <div id="c-look"></div>
+    <div id="c-sliders"></div>
+    <textarea id="recipe" readonly hidden aria-label="Character recipe (JSON)"></textarea>
+  </div>
+</div>
+<div id="status">loading…</div>
+<script>/* template guard: this file is the viewer TEMPLATE (placeholders are filled by make_viewer.py / mkviewer_char.py);
+   opened directly it has no model, so say so instead of failing with ReferenceErrors */
+if (/^__[A-Z_]+__$/.test(document.title) || document.title === '' && document.getElementById('glb') && /^__/.test(document.getElementById('glb').textContent)) {
+  window.__TEMPLATE__ = true;
+  document.addEventListener('DOMContentLoaded', () => { document.body.innerHTML = '<div style="font:15px system-ui;color:#dde;background:#161a22;padding:40px;min-height:100vh">' +
+    '<h2>This is a viewer template, not a viewer</h2><p>Open a built page instead, e.g. <code>viewer/base_male_lookdev.html</code>, ' +
+    '<code>viewer/base_female_lookdev.html</code>, <code>viewer/base_male.html</code> or <code>viewer/knight_*.html</code> (built by ' +
+    '<code>viewer/make_viewer.py</code> / <code>viewer/build_lookdev.sh</code>).</p></div>'; });
+  window.addEventListener('error', e => e.preventDefault(), true);
+}
+</script>
+<script type="application/octet-stream" id="glb">__GLB_BASE64__</script>
+<script type="application/octet-stream" id="parts">__PARTS_BASE64__</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+<script src="hand_poses.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const status = $('#status');
+addEventListener('error', e => { if (!window.__TEMPLATE__) status.textContent = 'error: ' + e.message + ' (line ' + e.lineno + ')'; });
+if (!window.THREE || !THREE.GLTFLoader) { status.textContent = 'three.js failed to load'; throw new Error('three'); }
+const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.82;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.02, 200);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.minDistance = 0.25; controls.maxDistance = 40;
+const key = new THREE.DirectionalLight(0xfff1e0, 1.7); key.position.set(-2.2, 3.2, 3.0); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.camera.left = -1.5; key.shadow.camera.right = 1.5;
+key.shadow.camera.top = 2.2; key.shadow.camera.bottom = -0.2; key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xdce6ff, 1.4); rim.position.set(1.5, 2.8, -3.2); scene.add(rim);
+scene.add(new THREE.HemisphereLight(0xdfe6f0, 0x3a3530, 0.35));
+const ground = new THREE.Mesh(new THREE.CircleGeometry(3, 64), new THREE.MeshStandardMaterial({color: 0x4a4744, roughness: 0.95}));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+const VIEWS = __VIEWS__;
+let model, bones = {}, rest = {}, morphMeshes = [], names = [], skel, hairMeshes = [], restY = {};
+let CUST = null, currentPose = 'A pose', hairOn = true, refitOn = true;
+const custVals = {}, partSel = {}, varSel = {}, partObjs = {}, skeletons = new Set(), restPos = {}, parentQInv = {}, gltfOf = new Map();
+// Face weights are layered every frame: target (preset or slider) -> eased current value -> + preset loop
+// (laugh bounce) -> talk visemes -> idle blink = max(current, blink curve). The blink never overwrites an
+// expression's eyelid weight (the old viewer set eyeBlinkLeft = blink curve every frame, which re-opened the
+// winking eye as soon as the 'Wink' preset was applied). cust_* (customisation) weights go through the same
+// targets (set instantly); the pose correctives (cor_*) are driven from the skeleton (driveCorrectives).
+const target = {}, cur = {}, weights = {};
+let loop = null;
+function applyMorph(name, v) {
+  for (const m of morphMeshes) { const i = m.morphTargetDictionary[name]; if (i !== undefined) m.morphTargetInfluences[i] = v; }
+}
+function showSlider(name, v) {
+  const inp = document.querySelector(`input[data-m="${name}"]`);
+  if (inp) { inp.value = v; inp.parentElement.lastChild.textContent = v.toFixed(2); }
+}
+function setMorph(name, v, instant) { target[name] = v; if (instant) { cur[name] = v; applyMorph(name, v); } showSlider(name, v); }
+function clearMorphs(instant) { for (const n of names) if (!n.startsWith('cust_')) setMorph(n, 0, instant); }   // keeps the customisation
+
+// ---- poses: glTF space, +Y up, the character faces +Z, +X is the character's left ----
+// The pose table and the foot-ground contact solver are the POSEKIT block below (the same block as in
+// viewer/lookdev_template.html; scripts/pose_qa.py runs it in Blender). Feet: flat / heel-up with the toes flat on a
+// virtual MTP crease pivot / heel strike, planted by leg IK + a skin fit (no vertex under the floor); knees over the toes.
+const V = (x, y, z) => new THREE.Vector3(x, y, z).normalize();
+const poseBase = {};      // bone local positions of the current rest (load / refit): the solver moves the pelvis and toe pivots
+function resetPose() {
+  for (const n in bones) { bones[n].quaternion.copy(rest[n]); if (poseBase[n]) bones[n].position.copy(poseBase[n]); }
+  model.position.y = 0; model.updateMatrixWorld(true);
+}
+function aim(name, child, dir) {       // (kept for scripts / console use; the viewer poses come from POSEKIT)
+  const b = bones[name], c = bones[child]; if (!b || !c) return;
+  model.updateMatrixWorld(true);
+  const d = c.getWorldPosition(new THREE.Vector3()).sub(b.getWorldPosition(new THREE.Vector3())).normalize();
+  const q = new THREE.Quaternion().setFromUnitVectors(d, dir), wq = b.getWorldQuaternion(new THREE.Quaternion());
+  b.quaternion.copy(b.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(q.multiply(wq)));
+  model.updateMatrixWorld(true);
+}
+function localRot(name, axis, deg) { const b = bones[name]; if (b) b.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis, deg * Math.PI / 180)); }
+function rotW(name, axis, deg) {       // rotate a bone (and its children) about a model-space axis through its head
+  const b = bones[name]; if (!b) return;
+  model.updateMatrixWorld(true);
+  const q = new THREE.Quaternion().setFromAxisAngle(axis.clone().normalize(), deg * Math.PI / 180);
+  const wq = b.getWorldQuaternion(new THREE.Quaternion()), pq = b.parent.getWorldQuaternion(new THREE.Quaternion());
+  b.quaternion.copy(pq.invert().multiply(q.multiply(wq)));
+  model.updateMatrixWorld(true);
+}
+const S = ['_l', '_r'], sg = s => s === '_l' ? 1 : -1;
+const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
+/*POSEKIT_BEGIN*/
+// ---- POSEKIT: pose table + foot-ground contact solver, IDENTICAL in viewer/char_viewer_template.html and
+// viewer/lookdev_template.html (scripts/pose_qa.py checks the two blocks are equal and runs the same algorithm in
+// Blender from the table below: plan POSES_HANDS_PLAN.md sections 4-5). Character frame: +Y up, faces +Z, +X = its left.
+// Foot modes: flat | heel_up (heel raised about a virtual MTP crease pivot, toes flat: the ball bone gets a pivot
+// translation so the toes bend at the crease, not at the rig's mid-foot joint) | heel (heel strike) | swing | free.
+// Legs: two-bone IK with the knee in the foot's vertical plane (knees over the 2nd toe), the rest knee hinge kept;
+// pelvis / trunk solved per pose type; then a skin fit puts every planted foot's lowest sampled vertex at +0.5 mm.
+const POSEKIT = (() => {
+const TABLE = /*POSE_TABLE_BEGIN*/{"version": 1,
+ "consts": {"foot_y": 0.1, "samp_bins": 10, "samp_n": 10, "mtp_frac": 0.72, "mtp_h": 0.0153, "heel_frac": 0.1, "knee_r": 0.075, "clear": 0.0005, "fit_iters": 3, "blend_fit_iters": 1, "stool_front": 0.12, "kneel_h0": 0.06, "kneel_iters": 4, "spine_w": [["spine_01", 0.4], ["spine_02", 0.35], ["spine_03", 0.25]], "look_w": [["neck_01", 0.4], ["neck_02", 0.3], ["head", 0.3]]},
+ "lists": {
+  "char": ["A pose", "T pose", "Arms down", "Arms up", "Arms up 180", "Reach up", "Behind back", "Cross reach", "Squat", "Deep squat", "Lunge", "Kneel", "Sit", "High kick", "Fists"],
+  "lookdev": [["T pose", "T pose"], ["Arms up", "Arms up +clav"], ["Arms forward", "Arms forward"], ["Squat", "Squat"], ["Deep squat", "Deep squat"], ["Lunge", "Lunge"], ["Kneel", "Kneel"], ["Sit", "Sit"], ["High kick", "High kick"], ["Fists", "Fists"], ["Torso twist", "Torso twist"], ["Head turn", "Head turn"], ["Look down", "Look down"], ["Shrug", "Shrug"]]},
+ "poses": {
+  "A pose": {"ops": []},
+  "T pose": {"ops": [["aimS", "upperarm", "lowerarm", [1, 0, 0]], ["aimS", "lowerarm", "hand", [1, 0, 0]]]},
+  "Arms down": {"ops": [["aimS", "upperarm", "lowerarm", [0.12, -1, -0.02]], ["aimS", "lowerarm", "hand", [0.05, -1, 0.12]]]},
+  "Arms up": {"ops": [["aimS", "upperarm", "lowerarm", [0.22, 1, -0.05]], ["aimS", "lowerarm", "hand", [0.12, 1, -0.05]]]},
+  "Arms up +clav": {"ops": [["rotWS", "clavicle", [0, 0, 1], 18], ["aimS", "upperarm", "lowerarm", [0.22, 1, -0.05]], ["aimS", "lowerarm", "hand", [0.12, 1, -0.05]]]},
+  "Arms up 180": {"ops": [["aimS", "upperarm", "lowerarm", [0.04, 1, -0.03]], ["aimS", "lowerarm", "hand", [0, 1, -0.03]]]},
+  "Reach up": {"ops": [["rotWS", "clavicle", [0, 0, 1], 8], ["aimS", "upperarm", "lowerarm", [0.14, 0.68, 0.72]], ["aimS", "lowerarm", "hand", [0.08, 0.8, 0.6]]]},
+  "Behind back": {"ops": [["aimS", "upperarm", "lowerarm", [0.3, -0.86, -0.42]], ["aimS", "lowerarm", "hand", [-0.85, 0.28, -0.45]]]},
+  "Cross reach": {"ops": [["rotW", "clavicle_l", [0, 1, 0], 12], ["aim", "upperarm_l", "lowerarm_l", [-0.5, 0.12, 0.85]], ["aim", "lowerarm_l", "hand_l", [-0.75, 0.2, 0.6]], ["aim", "upperarm_r", "lowerarm_r", [-0.12, -1, -0.02]], ["aim", "lowerarm_r", "hand_r", [-0.05, -1, 0.12]]]},
+  "Arms forward": {"ops": [["rotWS", "clavicle", [0, 0, 1], 4], ["aimS", "upperarm", "lowerarm", [0.14, -0.02, 1]], ["aimS", "lowerarm", "hand", [0.06, 0.04, 1]]]},
+  "Fists": {"ops": [["aimS", "upperarm", "lowerarm", [0.3, -0.75, 0.6]], ["aimS", "lowerarm", "hand", [0.1, 0.5, 1]], ["hands", "fist"]]},
+  "Torso twist": {"ops": [["rotW", "spine_02", [0, 1, 0], 10], ["rotW", "spine_03", [0, 1, 0], 12], ["rotW", "spine_04", [0, 1, 0], 12], ["rotW", "spine_05", [0, 1, 0], 6]]},
+  "Head turn": {"ops": [["rotW", "neck_01", [0, 1, 0], 18], ["rotW", "neck_02", [0, 1, 0], 12], ["rotW", "head", [0, 1, 0], 22], ["rotW", "head", [0, 0, 1], -8]]},
+  "Look down": {"ops": [["rotW", "neck_01", [1, 0, 0], 14], ["rotW", "neck_02", [1, 0, 0], 10], ["rotW", "head", [1, 0, 0], 16]]},
+  "Shrug": {"ops": [["rotWS", "clavicle", [0, 0, 1], 24]]},
+  "Squat": {"note": "parallel squat: feet flat, 22 deg out, heel width solved so the thighs run along the feet (knees over the 2nd toe, thighs <= 8 deg wider), thighs horizontal, trunk parallel to the shin, shin tilt solved for the CoM over 50 % of the foot (Myer 2014, Straub & Powers 2024)", "legs": {"type": "squat", "stance": "align", "yaw": 22, "beta": "balance", "trunk": "shin", "pelvis_tilt": 12, "look": 12, "align_deg": -8, "stance_range": [0.85, 1.3], "thigh": "horizontal", "com": 0.5}, "ops": [["aimS", "upperarm", "lowerarm", [0.15, -0.1, 1]], ["aimS", "lowerarm", "hand", [0, 0.1, 1]]]},
+  "Deep squat": {"note": "heels-down deep squat: shin 35 deg forward (DF), knee 145, feet 28 deg out, heel width solved for thigh / foot alignment, trunk solved for the CoM over 45 % of the foot, 5 deg posterior pelvic tilt (Hemmerich 2006, Endo 2020)", "legs": {"type": "squat", "stance": "align", "yaw": 28, "beta": 35, "knee": 145, "trunk": "balance", "com": 0.45, "pelvis_tilt": -5, "look": 15, "align_deg": -8, "stance_range": [0.85, 1.3]}, "ops": [["aimS", "upperarm", "lowerarm", [0.2, 0, 1]], ["aimS", "lowerarm", "hand", [0, 0.15, 1]]]},
+  "Lunge": {"note": "forward lunge at the bottom: front shin 10 deg forward, rear heel up with the toes flat (MTP extension 50), rear hip extended 10, rear knee joint 4.7 % of stature above the floor, trunk 5 (Hofmann 2017)", "legs": {"type": "split", "front": "_l", "width": 1.0, "front_beta": 10, "front_yaw": 5, "rear_yaw": 5, "rear_mtp": 50, "rear_hip_ext": 10, "rear_knee_h": 0.047, "trunk": "balance", "look": 5, "trunk_range": [-3, 12]}, "ops": [["aimS", "upperarm", "lowerarm", [0.25, -1, 0.08]], ["aimS", "lowerarm", "hand", [0.12, -1, 0.3]]]},
+  "Kneel": {"note": "kneeling on the rear knee (patella on the floor), rear toes tucked (MTP extension 60), front foot flat with the shin 5 deg forward, trunk upright", "legs": {"type": "split", "front": "_l", "width": 1.0, "front_beta": 5, "front_yaw": 5, "rear_yaw": 3, "rear_mtp": 58, "rear_hip_ext": 0, "rear_knee_h": "contact", "trunk": "balance", "look": 3, "trunk_range": [-3, 8]}, "ops": [["aimS", "upperarm", "lowerarm", [0.2, -1, 0.1]], ["aimS", "lowerarm", "hand", [0.1, -1, 0.35]]]},
+  "Sit": {"note": "seated on a stool (drawn under the buttocks): knees 90, shins vertical, feet flat hip-width, 8 deg out, trunk 4 forward", "legs": {"type": "squat", "stance": "rest", "yaw": 8, "beta": 0, "knee": 90, "trunk": 4, "pelvis_tilt": 0, "stool": true, "look": 4}, "ops": [["aimS", "upperarm", "lowerarm", [0.12, -0.93, 0.35]], ["aimS", "lowerarm", "hand", [0.02, -0.25, 1]]]},
+  "High kick": {"note": "front kick on the right leg: standing heel under the hip, knee 10, trunk leaning 22 deg over the standing leg and 8 back (posterior pelvic tilt), pelvis shifted until the CoM is over the standing foot, kick foot free and plantarflexed", "legs": {"type": "single", "stand": "_r", "knee": 10, "com": 0.45, "pelvis_tilt": -8, "stand_width": 1.0}, "ops": [["rotW", "spine_01", [0, 0, 1], 14], ["rotW", "spine_03", [0, 0, 1], 8], ["aim", "thigh_l", "calf_l", [0.1, 0.65, 0.75]], ["aim", "calf_l", "foot_l", [0.08, 0.71, 0.7]], ["aim", "foot_l", "ball_l", [0.05, 0.83, 0.55]], ["aimS", "upperarm", "lowerarm", [0.45, -0.84, 0.3]], ["aimS", "lowerarm", "hand", [0.45, -0.84, 0.3]]]}
+ },
+ "walk": {"period": 1.1, "fps": 30, "duty": 0.62, "step": 0.26, "phase0": 0.0, "turnout": 7, "ahead": 0.0, "flat_at": 0.1, "heel_off": 0.32, "heel_pitch": 12, "mtp_toe_off": 40, "lift": 0.045, "lift_skew": 0.6, "pitch_end": 0.9, "mtp_relax": 0.6, "arm": 16, "elbow": 18, "elbow_fwd": 14, "sway": 0.008, "drop": 0.014, "bob": 0.013, "yaw": 4, "twist": 7, "lean": 4}}/*POSE_TABLE_END*/;
+const C = TABLE.consts, S2 = ['_l', '_r'], UP = [0, 1, 0], XA = [1, 0, 0], I4 = [0, 0, 0, 1], EPS = 2.220446049250313e-16;
+const sg = s => s === '_l' ? 1 : -1, other = s => s === '_l' ? '_r' : '_l';
+// ---- math (three.js conventions, quaternion [x, y, z, w]); scripts/pose_qa.py has the same functions
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const len = a => Math.sqrt(dot(a, a)), nrm = a => { const n = len(a); return n > 0 ? mul(a, 1 / n) : a.slice(); };
+const lerp = (a, b, t) => add(a, mul(sub(b, a), t)), D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const smooth = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+const angle = (a, b) => Math.acos(Math.max(-1, Math.min(1, dot(a, b) / Math.max(1e-12, Math.sqrt(dot(a, a) * dot(b, b)))))) * R2D;
+function qmul(a, b) {
+  const [ax, ay, az, aw] = a, [bx, by, bz, bw] = b;
+  return [ax * bw + aw * bx + ay * bz - az * by, ay * bw + aw * by + az * bx - ax * bz, az * bw + aw * bz + ax * by - ay * bx, aw * bw - ax * bx - ay * by - az * bz];
+}
+const qinv = q => [-q[0], -q[1], -q[2], q[3]];
+function qrot(q, v) {
+  const [x, y, z, w] = q, [vx, vy, vz] = v;
+  const ix = w * vx + y * vz - z * vy, iy = w * vy + z * vx - x * vz, iz = w * vz + x * vy - y * vx, iw = -x * vx - y * vy - z * vz;
+  return [ix * w + iw * -x + iy * -z - iz * -y, iy * w + iw * -y + iz * -x - ix * -z, iz * w + iw * -z + ix * -y - iy * -x];
+}
+function qaxis(axis, deg) { const a = nrm(axis), h = deg * D2R / 2, s = Math.sin(h); return [a[0] * s, a[1] * s, a[2] * s, Math.cos(h)]; }
+function qunit(a, b) {
+  let r = dot(a, b) + 1, q;
+  if (r < EPS) { r = 0; q = Math.abs(a[0]) > Math.abs(a[2]) ? [-a[1], a[0], 0, r] : [0, -a[2], a[1], r]; }
+  else q = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0], r];
+  const n = Math.sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]); return q.map(x => x / n);
+}
+function qslerp(a, b, t) {
+  if (t === 0) return a.slice(); if (t === 1) return b.slice();
+  const [x, y, z, w] = a; let [bx, by, bz, bw] = b, c = w * bw + x * bx + y * by + z * bz;
+  if (c < 0) { bx = -bx; by = -by; bz = -bz; bw = -bw; c = -c; }
+  if (c >= 1) return a.slice();
+  const ss = 1 - c * c;
+  if (ss <= EPS) { const s = 1 - t, q = [s * x + t * bx, s * y + t * by, s * z + t * bz, s * w + t * bw], n = Math.hypot(...q); return q.map(v => v / n); }
+  const sh = Math.sqrt(ss), h = Math.atan2(sh, c), ra = Math.sin((1 - t) * h) / sh, rb = Math.sin(t * h) / sh;
+  return [x * ra + bx * rb, y * ra + by * rb, z * ra + bz * rb, w * ra + bw * rb];
+}
+function qmat(m) {   // rows
+  const [[m11, m12, m13], [m21, m22, m23], [m31, m32, m33]] = m, tr = m11 + m22 + m33;
+  if (tr > 0) { const s = 0.5 / Math.sqrt(tr + 1); return [(m32 - m23) * s, (m13 - m31) * s, (m21 - m12) * s, 0.25 / s]; }
+  if (m11 > m22 && m11 > m33) { const s = 2 * Math.sqrt(1 + m11 - m22 - m33); return [0.25 * s, (m12 + m21) / s, (m13 + m31) / s, (m32 - m23) / s]; }
+  if (m22 > m33) { const s = 2 * Math.sqrt(1 + m22 - m11 - m33); return [(m12 + m21) / s, 0.25 * s, (m23 + m32) / s, (m13 - m31) / s]; }
+  const s = 2 * Math.sqrt(1 + m33 - m11 - m22); return [(m13 + m31) / s, (m23 + m32) / s, 0.25 * s, (m21 - m12) / s];
+}
+function qframe(u, n) { const z = cross(n, u); return qmat([[n[0], u[0], z[0]], [n[1], u[1], z[1]], [n[2], u[2], z[2]]]); }
+const mirrorDir = (d, s) => [d[0] * sg(s), d[1], d[2]], mirrorAxis = (a, s) => s === '_l' ? a.slice() : [a[0], -a[1], -a[2]];
+
+// ---- virtual skeleton over the page's bones (character frame = env.root's local frame)
+function Skel(env) {
+  const B = env.bones, names = Object.keys(B), parent = {};
+  for (const n of names) { const pb = B[n].parent; parent[n] = pb && pb.isBone && B[pb.name] === pb ? pb.name : null; }
+  const sk = {names, parent, q: {}, p: {}, w: {}, base: {}};
+  sk.read = () => {             // locals from the bones (after the page's resetPose), base = root-bone parent in the character frame
+    env.root.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(env.root.matrixWorld).invert(), m = new THREE.Matrix4(), pp = new THREE.Vector3(), qq = new THREE.Quaternion(), ss = new THREE.Vector3();
+    for (const n of names) {
+      const b = B[n]; sk.q[n] = [b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w]; sk.p[n] = [b.position.x, b.position.y, b.position.z];
+      if (parent[n] === null) { m.multiplyMatrices(inv, b.parent.matrixWorld); m.decompose(pp, qq, ss); sk.base[n] = [[qq.x, qq.y, qq.z, qq.w], [pp.x, pp.y, pp.z]]; }
+    }
+    sk.w = {};
+  };
+  sk.world = n => {
+    let w = sk.w[n]; if (w) return w;
+    const par = parent[n];
+    if (par === null) { const [bq, bt] = sk.base[n]; w = [qmul(bq, sk.q[n]), add(bt, qrot(bq, sk.p[n]))]; }
+    else { const [pq, pt] = sk.world(par); w = [qmul(pq, sk.q[n]), add(pt, qrot(pq, sk.p[n]))]; }
+    return (sk.w[n] = w);
+  };
+  sk.wpos = n => sk.world(n)[1]; sk.wquat = n => sk.world(n)[0]; sk.has = n => n in B;
+  const pw = n => parent[n] === null ? sk.base[n] : sk.world(parent[n]);
+  sk.setWorldQ = (n, q) => { sk.q[n] = qmul(qinv(pw(n)[0]), q); sk.w = {}; };
+  sk.setWorld = (n, pos, q) => { const [pq, pt] = pw(n), iq = qinv(pq); sk.q[n] = qmul(iq, q); sk.p[n] = qrot(iq, sub(pos, pt)); sk.w = {}; };
+  sk.localRot = (n, q) => { sk.q[n] = qmul(sk.q[n], q); sk.w = {}; };
+  sk.flush = () => {           // write the locals into the bones (and let the page's own code see them)
+    for (const n of names) { const b = B[n], q = sk.q[n], p = sk.p[n]; b.quaternion.set(q[0], q[1], q[2], q[3]); b.position.set(p[0], p[1], p[2]); }
+    env.root.updateMatrixWorld(true);
+  };
+  return sk;
+}
+
+function make(env) {
+  const sk = Skel(env), B = env.bones, kit = {TABLE, cache: {}, rest: null};
+  const meshes = []; env.root.traverse(o => { if (o.isSkinnedMesh) meshes.push(o); });
+  const body = meshes.find(m => /_body$/.test(m.name)) || meshes[0];
+  const _v = new THREE.Vector3(), _m = new THREE.Matrix4();
+  // one vertex in the character frame: raw + morph deltas, optionally skinned (three r147 boneTransform ignores morphs)
+  function vtx(mesh, i, skinned) {
+    const pos = mesh.geometry.attributes.position; _v.fromBufferAttribute(pos, i);
+    const ma = mesh.geometry.morphAttributes.position, inf = mesh.morphTargetInfluences;
+    if (ma && inf) for (let k = 0; k < inf.length; k++) if (inf[k] && ma[k]) { _v.x += ma[k].getX(i) * inf[k]; _v.y += ma[k].getY(i) * inf[k]; _v.z += ma[k].getZ(i) * inf[k]; }
+    if (skinned) mesh.boneTransform(i, _v);
+    _v.applyMatrix4(mesh.matrixWorld).applyMatrix4(_m);
+    return [_v.x, _v.y, _v.z];
+  }
+  const posed = list => list.map(([mesh, i]) => vtx(mesh, i, true));
+  function sampleY(list) { let mn = Infinity; for (const p of posed(list)) mn = Math.min(mn, p[1]); return mn; }
+
+  // ---- rest data (from the page's rest pose: call env.reset() first)
+  function restData() {
+    env.reset(); sk.read(); _m.copy(env.root.matrixWorld).invert();
+    const R = {}, W = sk.wpos;
+    R.P0 = W('pelvis').slice(); R.PQ0 = sk.wquat('pelvis').slice();
+    R.SHW = len(sub(W('upperarm_l'), W('upperarm_r'))); R.HIPW = len(sub(W('thigh_l'), W('thigh_r')));
+    R.restQ = {}; for (const n of sk.names) R.restQ[n] = sk.wquat(n).slice();
+    // candidate vertices (rest, character frame) of every skinned mesh: feet, knees, buttocks
+    let top = -Infinity; const cand = [];
+    const hipy = 0.5 * (W('thigh_l')[1] + W('thigh_r')[1]), kp = {_l: W('calf_l'), _r: W('calf_r')};
+    const BUT = new Set(['pelvis', 'thigh_l', 'thigh_r', 'thigh_twist_01_l', 'thigh_twist_01_r']);
+    for (const mesh of meshes) {
+      const pos = mesh.geometry.attributes.position, si = mesh.geometry.attributes.skinIndex, sw = mesh.geometry.attributes.skinWeight;
+      for (let i = 0; i < pos.count; i++) {
+        _v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld).applyMatrix4(_m);
+        if (mesh === body && _v.y > top) top = _v.y;
+        if (_v.y < C.foot_y + 0.02 || _v.distanceTo(new THREE.Vector3(...kp._l)) < C.knee_r + 0.02 || _v.distanceTo(new THREE.Vector3(...kp._r)) < C.knee_r + 0.02 ||
+            (_v.y > hipy - 0.27 && _v.y < hipy + 0.07)) {
+          const p = vtx(mesh, i, false);
+          const ws = [sw.getX(i), sw.getY(i), sw.getZ(i), sw.getW(i)], is = [si.getX(i), si.getY(i), si.getZ(i), si.getW(i)];   // (r147: no getComponent)
+          let bi = 0, bw = -1; for (let k = 0; k < 4; k++) if (ws[k] > bw) { bw = ws[k]; bi = is[k]; }
+          cand.push({mesh, i, p, dom: mesh.skeleton.bones[bi] ? mesh.skeleton.bones[bi].name : ''});
+        }
+      }
+    }
+    R.stature = top; R.head0 = W('head').slice(); R.headTop0 = [R.head0[0], top, R.head0[2]];
+    R.F = {};
+    for (const s of S2) {
+      const d = {};
+      for (const b of ['thigh', 'calf', 'foot', 'ball']) { d[b + '_p'] = W(b + s).slice(); d[b + '_q'] = sk.wquat(b + s).slice(); }
+      d.L1 = len(sub(d.calf_p, d.thigh_p)); d.L2 = len(sub(d.foot_p, d.calf_p));
+      // dedupe by position (the GLB splits vertices at UV seams)
+      const seen = new Set(), P = [];
+      for (const c of cand) if (c.p[1] < C.foot_y && c.p[0] * sg(s) > 0.01) {
+        const key = c.p.map(x => Math.round(x * 1e5)).join(','); if (seen.has(key)) continue; seen.add(key); P.push(c);
+      }
+      let hb = P[0].p; for (const c of P) if (c.p[2] < hb[2]) hb = c.p;
+      const bdir = qrot(d.ball_q, UP); let mx = -Infinity; for (const c of P) mx = Math.max(mx, dot(sub(c.p, d.ball_p), bdir));
+      const tip = add(d.ball_p, mul(bdir, mx)), f0 = nrm([tip[0] - hb[0], 0, tip[2] - hb[2]]);
+      let FL = -Infinity; for (const c of P) FL = Math.max(FL, dot(sub(c.p, hb), f0));
+      Object.assign(d, {hb, hbf: [hb[0], 0, hb[2]], f0, FL, toe2: tip, side0: nrm(cross(UP, f0)), turnout0: Math.atan2(f0[0] * sg(s), f0[2]) * R2D});
+      d.pmtp = add(add(d.hbf, mul(f0, C.mtp_frac * FL)), mul(UP, C.mtp_h * top));
+      d.pheel = add(d.hbf, mul(f0, C.heel_frac * FL));
+      // samples: the lowest samp_n per bin along the foot + the samp_n rearmost (identical rule in pose_qa.py)
+      const fr = c => dot(sub(c.p, hb), f0) / FL, bins = {};
+      for (const c of P) { const b = Math.min(C.samp_bins - 1, Math.max(0, Math.floor(fr(c) * C.samp_bins))); (bins[b] = bins[b] || []).push(c); }
+      const chosen = new Set();
+      for (const b in bins) bins[b].sort((a, c) => a.p[1] - c.p[1]).slice(0, C.samp_n).forEach(c => chosen.add(c));
+      P.slice().sort((a, c) => fr(a) - fr(c)).slice(0, C.samp_n).forEach(c => chosen.add(c));
+      d.samples = [...chosen].map(c => [c.mesh, c.i]);
+      d.knee = cand.filter(c => len(sub(c.p, d.calf_p)) < C.knee_r && c.p[2] > d.calf_p[2]).map(c => [c.mesh, c.i]);
+      R.F[s] = d;
+    }
+    R.butt = cand.filter(c => BUT.has(c.dom) && c.p[1] > hipy - 0.25 && c.p[1] < hipy + 0.05).map(c => [c.mesh, c.i]);
+    kit.rest = R; kit.cache = {};
+    return R;
+  }
+  const RD = () => kit.rest || restData();
+
+  // ---- ops
+  function rotW(n, axis, deg) { if (sk.has(n)) sk.setWorldQ(n, qmul(qaxis(axis, deg), sk.wquat(n))); }
+  function aim(n, child, d, w) {
+    if (!(sk.has(n) && sk.has(child))) return;
+    let q = qunit(nrm(sub(sk.wpos(child), sk.wpos(n))), nrm(d)); if (w !== 1) q = qslerp(I4, q, w);
+    sk.setWorldQ(n, qmul(q, sk.wquat(n)));
+  }
+  const handsDone = [];
+  function runOps(ops, w) {
+    for (const op of ops) {
+      const k = op[0];
+      if (k === 'aim') aim(op[1], op[2], op[3], w);
+      else if (k === 'aimS') S2.forEach(s => aim(op[1] + s, op[2] + s, mirrorDir(op[3], s), w));
+      else if (k === 'rotW') rotW(op[1], op[2], op[3] * w);
+      else if (k === 'rotWS') S2.forEach(s => rotW(op[1] + s, mirrorAxis(op[2], s), op[3] * w));
+      else if (k === 'localRot') { if (sk.has(op[1])) sk.localRot(op[1], qaxis(op[2], op[3] * w)); }
+      else if (k === 'hands') S2.forEach(s => { if (env.hands && env.hands.available(op[1])) handsDone.push([s, op[1], w]); else legacyHand(s, op[1], w); });
+    }
+  }
+  function legacyHand(s, preset, w) {     // the viewers' old Fists curl (local X): fallback without viewer/hand_poses.js
+    if (preset !== 'fist' && preset !== 'fist_legacy') return;
+    for (const f of ['index', 'middle', 'ring', 'pinky']) for (const [i, a] of [[1, 75], [2, 82], [3, 60]]) if (sk.has(`${f}_0${i}${s}`)) sk.localRot(`${f}_0${i}${s}`, qaxis(XA, a * w));
+    for (const [i, a] of [[2, 45], [3, 45]]) if (sk.has(`thumb_0${i}${s}`)) sk.localRot(`thumb_0${i}${s}`, qaxis(XA, a * w));
+  }
+
+  // ---- foot placement G = T(pos) Yaw(yaw) T(-heel back on the floor); mode rotation about its pivot in the rest frame
+  function placeXf(s, pl) {
+    const F = RD().F[s], qG = qaxis(UP, pl.yaw);
+    const pos = pl.mode === 'swing' ? sub(pl.ankle, qrot(qG, sub(F.foot_p, F.hbf))) : pl.pos;
+    const G = X => add(pos, qrot(qG, sub(X, F.hbf)));
+    const ang = pl.ang || 0;
+    let qm = I4.slice(), piv = F.foot_p;
+    if (pl.mode === 'heel_up') { qm = qaxis(F.side0, ang); piv = F.pmtp; }
+    else if (pl.mode === 'heel') { qm = qaxis(F.side0, -ang); piv = F.pheel; }
+    else if (pl.mode === 'swing') { qm = qaxis(F.side0, ang); piv = F.foot_p; }
+    const M = X => add(piv, qrot(qm, sub(X, piv)));
+    return {qG, G, qm, M};
+  }
+  function footTargets(s, pl) {
+    const F = RD().F[s], x = placeXf(s, pl);
+    return Object.assign(x, {At: x.G(x.M(F.foot_p)), qf: qmul(x.qG, qmul(x.qm, F.foot_q))});
+  }
+  function legIK(s, At, Q, m, fwd) {
+    const F = RD().F[s], H = sk.wpos('thigh' + s), L1 = F.L1, L2 = F.L2, D = sub(At, H);
+    let d = len(D); const short = Math.max(0, d - (L1 + L2) * 0.99999);
+    d = Math.min(Math.max(d, Math.abs(L1 - L2) + 1e-6), (L1 + L2) * 0.99999);
+    const u = mul(D, 1 / Math.max(1e-12, len(D))), a = (L1 * L1 - L2 * L2 + d * d) / (2 * d), r = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+    const Cc = add(H, mul(u, a)), e1 = nrm(Math.abs(u[0]) < 0.9 ? cross(u, XA) : cross(u, UP)), e2 = cross(u, e1);
+    const g1 = dot(e1, m), g2 = dot(e2, m), R0 = r * Math.sqrt(g1 * g1 + g2 * g2), rhs = -dot(sub(Cc, Q), m), ph0 = Math.atan2(g2, g1);
+    const cands = R0 > 1e-9 && Math.abs(rhs) <= R0 ? [ph0 + Math.acos(rhs / R0), ph0 - Math.acos(rhs / R0)] : [rhs > 0 ? ph0 : ph0 + Math.PI];
+    let K = null, bestv = -1e9;
+    for (const ph of cands) { const k = add(Cc, add(mul(e1, r * Math.cos(ph)), mul(e2, r * Math.sin(ph)))), v = dot(sub(k, H), fwd); if (v > bestv) { K = k; bestv = v; } }
+    const At2 = add(H, mul(u, d));
+    let n = cross(sub(At2, H), sub(K, H)); if (dot(n, n) < 1e-14) n = mul(cross(UP, fwd), -1); n = nrm(n);
+    const ut = nrm(sub(K, H)), uc = nrm(sub(At2, K)), u0t = nrm(sub(F.calf_p, F.thigh_p)), u0c = nrm(sub(F.foot_p, F.calf_p)), n0 = [-1, 0, 0];
+    const orth = (v, a) => nrm(sub(v, mul(a, dot(v, a))));
+    const Qt = qmul(qframe(ut, orth(n, ut)), qinv(qframe(u0t, orth(n0, u0t)))), Qc = qmul(qframe(uc, orth(n, uc)), qinv(qframe(u0c, orth(n0, u0c))));
+    sk.setWorldQ('thigh' + s, qmul(Qt, F.thigh_q)); sk.setWorldQ('calf' + s, qmul(Qc, F.calf_q));
+    return short;
+  }
+  function poseLeg(s, pl) {
+    const F = RD().F[s], t = footTargets(s, pl);
+    const At = pl.mode === 'swing' ? pl.ankle : t.At, Q = pl.mode === 'swing' ? At : t.G(F.hbf);
+    const short = legIK(s, At, Q, qrot(t.qG, F.side0), qrot(t.qG, F.f0));
+    sk.setWorldQ('foot' + s, t.qf);
+    const e = pl.mtp !== undefined ? pl.mtp : (pl.mode === 'heel_up' ? pl.ang : 0);
+    if (e && sk.has('ball' + s)) {     // toe world = foot world * foot_rest^-1 * Rot_about(P_mtp, side0, -e) * toe_rest
+      const [qfw, tfw] = sk.world('foot' + s), qe = qaxis(F.side0, -e);
+      const pRest = add(F.pmtp, qrot(qe, sub(F.ball_p, F.pmtp))), relQ = qmul(qfw, qinv(F.foot_q));
+      sk.setWorld('ball' + s, add(tfw, qrot(relQ, sub(pRest, F.foot_p))), qmul(relQ, qmul(qe, F.ball_q)));
+    }
+    return short;
+  }
+  const setPelvis = (P, dq) => sk.setWorld('pelvis', P, qmul(dq, RD().PQ0));
+  let pls = {};
+  function legsAll(P, dq) {
+    for (let it = 0; it < 4; it++) {
+      let short = 0; for (const s in pls) short = Math.max(short, poseLeg(s, pls[s]));
+      if (short <= 1e-6) break;
+      P = sub(P, [0, short + 0.002, 0]); setPelvis(P, dq);
+    }
+    return P;
+  }
+  // ---- realize a solution at weight w (0 = rest, 1 = the solved pose); fit = skin-fit iterations (0 = none)
+  function realize(sol, w, fit) {
+    const R = RD(); env.reset(); sk.read(); handsDone.length = 0;
+    let P = lerp(R.P0, sol.P, w); const dq = qslerp(I4, sol.dqP, w);
+    setPelvis(P, dq);
+    for (const [b, ax, deg] of sol.spine || []) rotW(b, ax, deg * w);
+    runOps(sol.ops || [], w);
+    pls = {};
+    for (const s in sol.feet || {}) {
+      const pl = sol.feet[s]; if (pl.mode === 'free') continue;
+      const q = Object.assign({}, pl);
+      if (pl.mode !== 'swing') { q.pos = lerp(R.F[s].hbf, pl.pos, w); q.yaw = pl.yaw * w; q.ang = (pl.ang || 0) * w; if (pl.mtp !== undefined) q.mtp = pl.mtp * w; }
+      pls[s] = q;
+    }
+    P = legsAll(P, dq);
+    const nfit = Object.keys(pls).length ? fit : 0;
+    for (let it = 0; it < nfit; it++) {
+      flushAll();
+      for (const s in pls) if (pls[s].mode !== 'swing') pls[s].pos = sub(pls[s].pos, [0, sampleY(R.F[s].samples) - C.clear, 0]);
+      P = legsAll(P, dq);
+    }
+    kit.P = P;
+    return P;
+  }
+  function flushAll() {   // bones <- virtual skeleton, hands, correctives (so the skin samples see the full pose)
+    sk.flush();
+    for (const [s, preset, w] of handsDone) env.hands.apply(s, preset, w);     // viewer/hand_poses.js (HANDS builder)
+    if (env.correctives) env.correctives();
+    _m.copy(env.root.matrixWorld).invert();
+  }
+  // ---- measurements for the solves (joints only)
+  function legState(s) {
+    const H = sk.wpos('thigh' + s), K = sk.wpos('calf' + s), A = sk.wpos('foot' + s), pl = pls[s];
+    const fwd = pl ? qrot(qaxis(UP, pl.yaw), RD().F[s].f0) : [0, 0, 1], sh = sub(K, A);
+    return {H, K, A, beta: Math.atan2(dot(sh, fwd), dot(sh, UP)) * R2D, kappa: angle(sub(K, H), sub(A, K)), thighEl: K[1] - H[1]};
+  }
+  const trunkLean = () => { const t = sub(sk.wpos('neck_01'), sk.wpos('pelvis')); return Math.atan2(t[2], t[1]) * R2D; };
+  function footPoint(s, X) { const F = RD().F[s], [qf, tf] = sk.world('foot' + s); return add(tf, qrot(qmul(qf, qinv(F.foot_q)), sub(X, F.foot_p))); }
+  function comSeg() {        // Winter 2009 segment masses from the joints (pose_qa.py com_seg)
+    const R = RD(), W = sk.wpos, hipc = mul(add(W('thigh_l'), W('thigh_r')), 0.5), shc = mul(add(W('upperarm_l'), W('upperarm_r')), 0.5);
+    let tot = mul(mul(add(hipc, shc), 0.5), 0.497);
+    const [qh, th] = sk.world('head');
+    tot = add(tot, mul(add(th, qrot(qmul(qh, qinv(R.restQ.head)), mul(sub(R.headTop0, R.head0), 0.45))), 0.081));
+    for (const s of S2) {
+      const F = R.F[s];
+      tot = add(tot, mul(lerp(W('upperarm' + s), W('lowerarm' + s), 0.436), 0.028));
+      tot = add(tot, mul(lerp(W('lowerarm' + s), W('hand' + s), 0.430), 0.016));
+      tot = add(tot, mul(lerp(W('hand' + s), W('middle_01' + s), 0.6), 0.006));
+      tot = add(tot, mul(lerp(W('thigh' + s), W('calf' + s), 0.433), 0.100));
+      tot = add(tot, mul(lerp(W('calf' + s), W('foot' + s), 0.433), 0.0465));
+      tot = add(tot, mul(mul(add(footPoint(s, F.hb), footPoint(s, F.toe2)), 0.5), 0.0145));
+    }
+    return tot;
+  }
+  function feetFrac(c) {
+    const F = RD().F, hb = mul(add(footPoint('_l', F._l.hb), footPoint('_r', F._r.hb)), 0.5), tp = mul(add(footPoint('_l', F._l.toe2), footPoint('_r', F._r.toe2)), 0.5);
+    const u = [tp[0] - hb[0], 0, tp[2] - hb[2]], L = len(u);
+    return dot(sub(c, hb), mul(u, 1 / L)) / L;
+  }
+  function headPitch() { const u = qrot(qmul(sk.wquat('head'), qinv(RD().restQ.head)), UP); return Math.atan2(u[2], u[1]) * R2D; }
+  function thighVsFoot(s) {
+    const F = RD().F[s], hb = footPoint(s, F.hb), t2 = footPoint(s, F.toe2), fa = nrm([t2[0] - hb[0], 0, t2[2] - hb[2]]);
+    const th = sub(sk.wpos('calf' + s), sk.wpos('thigh' + s)), thh = nrm([th[0], 0, th[2]]);
+    return Math.atan2(dot(cross(fa, thh), UP), dot(fa, thh)) * R2D * -sg(s);
+  }
+  // ---- solve helpers
+  function solveLin(J, r) {      // Gaussian elimination with partial pivoting (n <= 3)
+    const n = r.length, A = J.map((row, i) => row.concat([-r[i]]));
+    for (let c = 0; c < n; c++) {
+      let p = c; for (let i = c + 1; i < n; i++) if (Math.abs(A[i][c]) > Math.abs(A[p][c])) p = i;
+      [A[c], A[p]] = [A[p], A[c]];
+      if (Math.abs(A[c][c]) < 1e-15) return null;
+      for (let i = c + 1; i < n; i++) { const f = A[i][c] / A[c][c]; for (let j = c; j <= n; j++) A[i][j] -= f * A[c][j]; }
+    }
+    const x = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) { let s = A[i][n]; for (let j = i + 1; j < n; j++) s -= A[i][j] * x[j]; x[i] = s / A[i][i]; }
+    return x;
+  }
+  function newton(f, x, tol = 0.01, it = 25, h = 1e-4, maxstep = 0.08) {
+    x = x.slice();
+    for (let k = 0; k < it; k++) {
+      const r = f(x); if (Math.max(...r.map(Math.abs)) < tol) break;
+      const J = r.map(() => new Array(x.length).fill(0));
+      for (let i = 0; i < x.length; i++) { const xe = x.slice(); xe[i] += h; const re = f(xe); for (let j = 0; j < r.length; j++) J[j][i] = (re[j] - r[j]) / h; }
+      const dx = solveLin(J, r); if (!dx) break;
+      const n = Math.max(...dx.map(Math.abs)), sc = n > maxstep ? maxstep / n : 1;
+      x = x.map((v, i) => v + dx[i] * sc);
+    }
+    return x;
+  }
+  const spineList = delta => C.spine_w.map(([b, wt]) => [b, [1, 0, 0], delta * wt]);
+  function trunkSolve(sol, target, look) {
+    const leanOf = dl => { sol.spine = spineList(dl); realize(sol, 1, 0); return trunkLean(); };
+    const fracOf = dl => { sol.spine = spineList(dl); realize(sol, 1, 0); return feetFrac(comSeg()); };
+    let d = 0;
+    if (target[0] === 'lean') {
+      d = target[1] - leanOf(0);
+      for (let k = 0; k < 5; k++) { const err = target[1] - leanOf(d); if (Math.abs(err) < 0.02) break; d += err; }
+    } else {
+      let lo = -25, hi = 85, flo = fracOf(lo) - target[1]; const fhi = fracOf(hi) - target[1];
+      if (flo * fhi > 0) d = Math.abs(flo) < Math.abs(fhi) ? lo : hi;
+      else for (let k = 0; k < 40; k++) {
+        d = 0.5 * (lo + hi); const fm = fracOf(d) - target[1]; if (Math.abs(fm) < 1e-4) break;
+        if ((fm < 0) === (flo < 0)) { lo = d; flo = fm; } else hi = d;
+      }
+    }
+    sol.spine = spineList(d);
+    if (look !== undefined && look !== null) {
+      realize(sol, 1, 0); const c = look - headPitch();
+      sol.spine = sol.spine.concat(C.look_w.map(([b, wt]) => [b, [1, 0, 0], c * wt]));
+    }
+    return d;
+  }
+  // ---- per pose type (pose_qa.py solve_squat / solve_split / solve_single)
+  function solveSquat(L, ops) {
+    const R = RD(), feet = {};
+    const setFeet = k => S2.forEach(s => {
+      const F = R.F[s], yaw = L.yaw !== undefined ? sg(s) * (L.yaw - F.turnout0) : 0;
+      feet[s] = {mode: 'flat', pos: [k === 'rest' ? F.hbf[0] : sg(s) * k * R.SHW / 2, 0, F.hbf[2]], yaw, ang: 0};
+    });
+    const stance = L.stance === undefined ? 'rest' : L.stance;
+    setFeet(stance === 'align' ? 1.0 : stance);
+    const sol = {P: R.P0.slice(), dqP: qaxis(XA, L.pelvis_tilt || 0), spine: [], feet, ops};
+    const second = L.thigh === 'horizontal' ? ['thigh', 0] : ['knee', L.knee === undefined ? 90 : L.knee];
+    const x0 = [R.P0[1] - 0.45, R.P0[2] - 0.12];
+    function legsFor(bt) {
+      sol.spine = [];
+      const f = x => {
+        sol.P = [R.P0[0], x[0], x[1]]; realize(sol, 1, 0);
+        const st = S2.map(legState), b = (st[0].beta + st[1].beta) / 2;
+        if (second[0] === 'thigh') {
+          const e = S2.reduce((a, s, i) => a + Math.asin(Math.max(-1, Math.min(1, st[i].thighEl / R.F[s].L1))) * R2D, 0) / 2;
+          return [b - bt, e - second[1]];
+        }
+        return [b - bt, (st[0].kappa + st[1].kappa) / 2 - second[1]];
+      };
+      const x = newton(f, x0); sol.P = [R.P0[0], x[0], x[1]];
+    }
+    function stanceFor(bt) {
+      let [lo, hi] = L.stance_range || [0.85, 1.3], k;
+      const ga = kk => { setFeet(kk); legsFor(bt); return (thighVsFoot('_l') + thighVsFoot('_r')) / 2 - (L.align_deg || 0); };
+      let glo = ga(lo); const ghi = ga(hi);
+      if ((glo < 0) === (ghi < 0)) k = Math.abs(glo) < Math.abs(ghi) ? lo : hi;
+      else for (let it = 0; it < 30; it++) {
+        k = 0.5 * (lo + hi); const gm = ga(k); if (Math.abs(gm) < 0.01) break;
+        if ((gm < 0) === (glo < 0)) { lo = k; glo = gm; } else hi = k;
+      }
+      setFeet(k); sol.stance = k;
+    }
+    function solveAt(bt, look) {
+      if (stance === 'align') stanceFor(bt);
+      legsFor(bt);
+      let tr = L.trunk === undefined ? 0 : L.trunk;
+      if (tr === 'shin') { realize(sol, 1, 0); tr = (legState('_l').beta + legState('_r').beta) / 2; }
+      trunkSolve(sol, tr === 'balance' ? ['frac', L.com] : ['lean', tr], look);
+    }
+    if (L.beta === 'balance') {
+      const g = b => { solveAt(b, null); realize(sol, 1, 0); return feetFrac(comSeg()) - L.com; };
+      let b0 = 30, b1 = 38, g0 = g(b0), g1 = g(b1);
+      for (let k = 0; k < 12; k++) {
+        if (Math.abs(g1) < 2e-4 || g1 === g0) break;
+        const b2 = Math.min(55, Math.max(15, b1 - g1 * (b1 - b0) / (g1 - g0)));
+        b0 = b1; b1 = b2; g0 = g1; g1 = g(b1);
+      }
+      sol.beta = b1; solveAt(b1, L.look);
+    } else solveAt(L.beta, L.look);
+    if (L.stool) { realize(sol, 1, C.fit_iters); sol.stool = stoolFromPose(); }
+    return sol;
+  }
+  function stoolFromPose() {
+    flushAll();
+    const R = RD(), B = posed(R.butt), kz = 0.5 * (sk.wpos('calf_l')[2] + sk.wpos('calf_r')[2]);
+    let top = Infinity, z0 = Infinity;
+    for (const p of B) if (p[2] < kz - C.stool_front && Math.abs(p[0]) < 0.2) { top = Math.min(top, p[1]); z0 = Math.min(z0, p[2]); }
+    const r4 = x => Math.round(x * 1e4) / 1e4;
+    return {top: Math.round((top - C.clear) * 1e5) / 1e5, x: [-0.21, 0.21], z: [r4(z0 - 0.04), r4(kz - C.stool_front)]};
+  }
+  function solveSplit(L, ops) {
+    const R = RD(), f = L.front, r = other(f), Ff = R.F[f], Fr = R.F[r];
+    const dq = qaxis(XA, L.pelvis_tilt || 0), hrOff = qrot(dq, sub(Fr.thigh_p, R.P0)), hfOff = qrot(dq, sub(Ff.thigh_p, R.P0));
+    const e = L.rear_hip_ext * D2R, th = L.rear_mtp, contact = L.rear_knee_h === 'contact';
+    let kh = contact ? C.kneel_h0 : L.rear_knee_h * R.stature;
+    const yawR = sg(r) * ((L.rear_yaw || 0) - Fr.turnout0), yawF = sg(f) * ((L.front_yaw || 0) - Ff.turnout0);
+    const qGr = qaxis(UP, yawR), qGf = qaxis(UP, yawF), wd = L.width === undefined ? 1 : L.width;
+    const sol = {P: R.P0.slice(), dqP: dq, spine: [], ops, feet: {}};
+    for (let it = 0; it < (contact ? C.kneel_iters : 1); it++) {
+      const P = [R.P0[0], kh + Fr.L1 * Math.cos(e) - hrOff[1], R.P0[2]];
+      const Hr = add(P, hrOff), Kr = add(Hr, mul([0, -Math.cos(e), -Math.sin(e)], Fr.L1));
+      const Aup = add(Fr.pmtp, qrot(qaxis(Fr.side0, th), sub(Fr.foot_p, Fr.pmtp)));
+      const ax = Fr.foot_p[0] * wd, dy = Aup[1] - Kr[1], dxx = ax - Kr[0];
+      const dz = Math.sqrt(Math.max(0, Fr.L2 * Fr.L2 - dy * dy - dxx * dxx)), Ar = [ax, Aup[1], Kr[2] - dz];
+      const posR = sub(Ar, qrot(qGr, sub(Aup, Fr.hbf))); posR[1] = 0;
+      const Hf = add(P, hfOff), ff = qrot(qGf, Ff.f0), bf = L.front_beta * D2R;
+      const Afx = Ff.foot_p[0] * wd, Afy = Ff.foot_p[1], Kx = Afx + Ff.L2 * Math.sin(bf) * ff[0], Ky = Afy + Ff.L2 * Math.cos(bf);
+      const rad = Ff.L1 * Ff.L1 - (Kx - Hf[0]) ** 2 - (Ky - Hf[1]) ** 2, Kz = Hf[2] + Math.sqrt(Math.max(0, rad));
+      const Af = [Afx, Afy, Kz - Ff.L2 * Math.sin(bf) * ff[2]], posF = sub(Af, qrot(qGf, sub(Ff.foot_p, Ff.hbf))); posF[1] = 0;
+      sol.P = P;
+      sol.feet = {[r]: {mode: 'heel_up', pos: posR, yaw: yawR, ang: th}, [f]: {mode: 'flat', pos: posF, yaw: yawF, ang: 0}};
+      if (contact) {
+        const opsSave = sol.ops; sol.ops = []; realize(sol, 1, C.fit_iters); sol.ops = opsSave;
+        flushAll(); kh -= sampleY(Fr.knee) - C.clear;
+      }
+    }
+    const tr = L.trunk === undefined ? 0 : L.trunk;
+    if (tr === 'balance') {       // CoM over the middle of the stance (front foot centre <-> rear toe pads)
+      const Gf = placeXf(f, sol.feet[f]).G, Gr = placeXf(r, sol.feet[r]).G;
+      const zt = 0.5 * (Gf(add(Ff.hbf, mul(Ff.f0, 0.5 * Ff.FL)))[2] + Gr(add(Fr.hbf, mul(Fr.f0, 0.85 * Fr.FL)))[2]);
+      let [lo, hi] = L.trunk_range || [0, 12], lam = null;
+      const cz = l => { trunkSolve(sol, ['lean', l], null); realize(sol, 1, 0); return comSeg()[2] - zt; };
+      const flo = cz(lo), fhi = cz(hi);
+      if (flo >= 0) lam = lo; else if (fhi <= 0) lam = hi;
+      else for (let k = 0; k < 30; k++) { lam = 0.5 * (lo + hi); const fm = cz(lam); if (Math.abs(fm) < 1e-4) break; if (fm < 0) lo = lam; else hi = lam; }
+      trunkSolve(sol, ['lean', lam], L.look); sol.trunk = lam;
+    } else trunkSolve(sol, ['lean', tr], L.look);
+    sol.rear = r;
+    return sol;
+  }
+  function solveSingle(L, ops) {
+    const R = RD(), st = L.stand, F = R.F[st];
+    const pos = F.hbf.slice(); if (L.stand_width !== undefined) pos[0] = sg(st) * L.stand_width * R.HIPW / 2;    // standing heel under the hip
+    const sol = {P: R.P0.slice(), dqP: qaxis(XA, L.pelvis_tilt || 0), spine: [], ops, feet: {[st]: {mode: 'flat', pos, yaw: 0, ang: 0}, [other(st)]: {mode: 'free'}}};
+    const cRest = add(pos, mul(F.f0, L.com * F.FL));
+    const dT = Math.sqrt(F.L1 * F.L1 + F.L2 * F.L2 + 2 * F.L1 * F.L2 * Math.cos(L.knee * D2R));   // hip -> ankle distance for that knee flexion
+    const f = x => { sol.P = x.slice(); realize(sol, 1, 0); const c = comSeg(), s_ = legState(st); return [(len(sub(s_.A, s_.H)) - dT) * 1000, (c[0] - cRest[0]) * 1000, (c[2] - cRest[2]) * 1000]; };
+    sol.P = newton(f, add(R.P0, [sg(st) * 0.05, -0.03, 0]), 0.02);
+    return sol;
+  }
+  function solve(name) {
+    if (kit.cache[name]) return kit.cache[name];
+    const spec = TABLE.poses[name], ops = spec.ops || [], L = spec.legs, R = RD();
+    let sol;
+    if (!L) sol = {P: R.P0.slice(), dqP: I4.slice(), spine: [], feet: {}, ops};
+    else if (L.type === 'squat') sol = solveSquat(L, ops);
+    else if (L.type === 'split') sol = solveSplit(L, ops);
+    else if (L.type === 'single') sol = solveSingle(L, ops);
+    sol.name = name;
+    return (kit.cache[name] = sol);
+  }
+  // ---- the walk: treadmill contact phases (pose_qa.py walk_sol)
+  function walkSol(t) {
+    const R = RD(), W = TABLE.walk, st = R.stature, T = W.period, duty = W.duty, stride = 2 * W.step * st, D = duty * stride;
+    const pl = ((t / T + W.phase0) % 1 + 1) % 1, feet = {}, ops = [];
+    for (const s of S2) {
+      const F = R.F[s], p = s === '_l' ? pl : (pl + 0.5) % 1, yaw = sg(s) * (W.turnout - F.turnout0);
+      const zhs = F.thigh_p[2] - (F.foot_p[2] - F.hbf[2]) + D / 2 + W.ahead * st, x = F.hbf[0];
+      if (p < duty) {
+        const pos = [x, 0, zhs - D * p / duty];
+        if (p < W.flat_at) feet[s] = {mode: 'heel', pos, yaw, ang: W.heel_pitch * (1 - smooth(0, W.flat_at, p))};
+        else if (p < W.heel_off) feet[s] = {mode: 'flat', pos, yaw, ang: 0};
+        else feet[s] = {mode: 'heel_up', pos, yaw, ang: W.mtp_toe_off * smooth(W.heel_off, duty, p)};
+      } else {
+        const u = (p - duty) / (1 - duty);
+        const Ato = footTargets(s, {mode: 'heel_up', pos: [x, 0, zhs - D], yaw, ang: W.mtp_toe_off}).At;
+        const Ahs = footTargets(s, {mode: 'heel', pos: [x, 0, zhs], yaw, ang: W.heel_pitch}).At;
+        const A = add(lerp(Ato, Ahs, smooth(0, 1, u)), mul(UP, W.lift * st * Math.sin(Math.PI * Math.pow(u, W.lift_skew))));
+        const pitch = W.mtp_toe_off + (-W.heel_pitch - W.mtp_toe_off) * smooth(0, W.pitch_end, u);
+        feet[s] = {mode: 'swing', ankle: A, yaw, ang: pitch, mtp: W.mtp_toe_off * (1 - smooth(0, W.mtp_relax, u))};
+      }
+      const c = -W.arm * Math.cos(2 * Math.PI * p);
+      ops.push(['aim', 'upperarm' + s, 'lowerarm' + s, [0.3 * sg(s), -Math.cos(c * D2R), Math.sin(c * D2R)]]);
+      const ee = c + W.elbow + W.elbow_fwd * Math.max(0, -Math.cos(2 * Math.PI * p));
+      ops.push(['aim', 'lowerarm' + s, 'hand' + s, [0.16 * sg(s), -Math.cos(ee * D2R), Math.sin(ee * D2R)]]);
+    }
+    const ph = 2 * Math.PI * (pl - duty / 2);
+    const P = add(R.P0, [W.sway * st * Math.cos(ph), -W.drop * st + W.bob * st * Math.cos(2 * ph), 0]);
+    const spine = [['spine_01', [1, 0, 0], W.lean], ['spine_03', [0, 1, 0], W.twist * Math.cos(2 * Math.PI * pl)]];
+    return {P, dqP: qaxis(UP, -W.yaw * Math.cos(2 * Math.PI * pl)), spine, feet, ops, name: 'Walk t=' + t.toFixed(3)};
+  }
+  // ---- public: pose the page's skeleton (the page's resetPose runs first, inside realize)
+  kit.apply = (name, w = 1, fit = C.fit_iters) => {
+    const sol = typeof name === 'string' ? solve(name) : name;
+    if (w === 1 && fit === C.fit_iters && sol.final) {        // cached result of the full solve + fit
+      env.reset(); sk.read(); for (const n in sol.final) { sk.q[n] = sol.final[n][0].slice(); sk.p[n] = sol.final[n][1].slice(); }
+      sk.w = {}; handsDone.length = 0; runHands(sol); flushAll(); return sol;
+    }
+    realize(sol, w, fit); flushAll();
+    if (w === 1 && fit === C.fit_iters && typeof name === 'string') { sol.final = {}; for (const n of sk.names) sol.final[n] = [sk.q[n].slice(), sk.p[n].slice()]; }
+    return sol;
+  };
+  function runHands(sol) { for (const op of sol.ops || []) if (op[0] === 'hands' && env.hands && env.hands.available(op[1])) S2.forEach(s => handsDone.push([s, op[1], 1])); }
+  kit.walk = t => { const sol = walkSol(t); realize(sol, 1, C.fit_iters); flushAll(); return sol; };
+  kit.solve = solve;
+  kit.invalidate = () => { kit.rest = null; kit.cache = {}; };
+  kit.dump = names => {      // joint positions (character frame) + the lowest body vertex, for the Blender cross-check
+    const out = {};
+    for (const n of names) {
+      const sol = n.startsWith('Walk t=') ? kit.walk(parseFloat(n.slice(7))) : kit.apply(n);
+      const j = {}; for (const b of ['pelvis', 'thigh_l', 'thigh_r', 'calf_l', 'calf_r', 'foot_l', 'foot_r', 'ball_l', 'ball_r', 'spine_03', 'neck_01', 'head', 'hand_l', 'hand_r', 'lowerarm_l', 'lowerarm_r']) if (sk.has(b)) j[b] = sk.wpos(b).map(x => Math.round(x * 1e5) / 1e5);
+      let mn = Infinity; const pos = body.geometry.attributes.position;
+      _m.copy(env.root.matrixWorld).invert();
+      for (let i = 0; i < pos.count; i++) mn = Math.min(mn, vtx(body, i, true)[1]);
+      out[n] = {joints: j, min_y_mm: Math.round(mn * 1e5) / 100, stool: sol.stool || null};
+    }
+    return out;
+  };
+  return kit;
+}
+return {TABLE, make};
+})();
+/*POSEKIT_END*/
+// hands: the Fists pose (POSEKIT op 'hands') = if (window.RTS_HANDS) RTS_HANDS.apply(bones, s, 'fist', 1); else the legacy
+// localRot curl (viewer/hand_poses.js is the HANDS builder's file; without it the old finger curl still runs)
+const POSE_HANDS = {available: p => !!(window.RTS_HANDS && RTS_HANDS.apply && (!RTS_HANDS.data || !RTS_HANDS.data.presets || RTS_HANDS.data.presets[p])),
+                    apply: (s, p, w) => RTS_HANDS.apply(bones, s, p, w)};
+let PK = null, poseStool = null;
+function poseKit() { return PK || (PK = POSEKIT.make({bones, root: model, reset: resetPose, hands: POSE_HANDS, correctives: () => driveCorrectives()})); }
+function showStool(st) {               // the Sit pose's stool (top = the solved buttock contact), a child of the model
+  if (!st) { if (poseStool) poseStool.visible = false; return; }
+  if (!poseStool) {
+    poseStool = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({color: 0x6b4a32, roughness: 0.85}));
+    poseStool.name = '__pose_stool__'; poseStool.castShadow = poseStool.receiveShadow = true; model.add(poseStool);
+  }
+  poseStool.scale.set(st.x[1] - st.x[0], st.top - 0.001, st.z[1] - st.z[0]);          // bottom 1 mm above the floor (no z-fight)
+  poseStool.position.set((st.x[0] + st.x[1]) / 2, 0.001 + (st.top - 0.001) / 2, (st.z[0] + st.z[1]) / 2); poseStool.visible = true;
+}
+const POSES = {};                      // button name -> () => pose (after resetPose, like before)
+for (const n of POSEKIT.TABLE.lists.char) POSES[n] = () => { const sol = poseKit().apply(n); showStool(sol && sol.stool); };
+// ---- pose-space correctives: the driver spec travels in the body mesh's glTF extras ('rts_correctives'). Each
+// corrective morph target's weight = smoothstep over the angle between the bone's +Y axis, seen in its ref bone's
+// frame, and a target direction (see scripts/correctives.py). Additive, like any morph target, before skinning.
+let correctives = [], corMesh = null, corOn = true;
+const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion(), _v = new THREE.Vector3();
+function driveCorrectives() {
+  if (!corMesh) return;
+  const dict = corMesh.morphTargetDictionary, inf = corMesh.morphTargetInfluences;
+  for (const c of correctives) {
+    const i = dict[c.name]; if (i === undefined) continue;
+    let w = 0;
+    if (corOn && c.b && c.r) {
+      c.b.getWorldQuaternion(_qa); c.r.getWorldQuaternion(_qb);
+      _v.set(c.axis[0], c.axis[1], c.axis[2]).applyQuaternion(_qa).applyQuaternion(_qb.invert());
+      const a = _v.angleTo(c.t) * 180 / Math.PI;
+      const t = Math.min(1, Math.max(0, (c.angle_from - a) / (c.angle_from - c.angle_to)));
+      w = t * t * (3 - 2 * t);
+    }
+    inf[i] = w; weights[c.name] = w;
+  }
+}
+// presets: scripts/expressions.json (keys starting with '_' are playback hints, e.g. _loop: {key: [min, max, hz]})
+const EXPR = __PRESETS__;
+const TALK = ['viseme_sil','viseme_aa','viseme_nn','viseme_I','viseme_DD','viseme_O','viseme_kk','viseme_E','viseme_SS','viseme_U','viseme_PP','viseme_aa','viseme_RR','viseme_CH','viseme_FF','viseme_TH','viseme_E','viseme_sil'];
+let talking = false, blinking = true, turntable = false, tStart = performance.now(), tPrev = performance.now();
+
+function mkButtons(el, items, onPick, initial) {
+  const bs = [];
+  for (const it of items) {
+    const b = document.createElement('button'); b.textContent = it; b.type = 'button';
+    b.onclick = () => { bs.forEach(x => x.classList.remove('on')); b.classList.add('on'); onPick(it); };
+    if (it === initial) b.classList.add('on');
+    el.appendChild(b); bs.push(b);
+  }
+  return bs;
+}
+function toggle(el, label, init, fn) {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.setAttribute('aria-pressed', init);
+  if (init) b.classList.add('on');
+  b.onclick = () => { const on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); fn(on); };
+  el.appendChild(b); fn(init);
+}
+function goView(n, snap) {
+  const v = VIEWS[n] || VIEWS.Body; camera.position.set(...v.p); controls.target.set(...v.t); controls.update();
+}
+const GROUPS = [['Brows', /^brow/], ['Eyes', /^eye/], ['Cheeks & nose', /^(cheek|nose)/], ['Jaw', /^jaw/], ['Mouth', /^mouth/], ['Tongue', /^tongue/], ['Visemes (OVR)', /^viseme/], ['Extra shapes (non-ARKit)', /^(smileOpen|snarl|grimace)/]];
+function buildSliders() {
+  const root = $('#morphs');
+  for (const [g, re] of GROUPS) {
+    const ns = names.filter(n => re.test(n)); if (!ns.length) continue;
+    const d = document.createElement('details'); if (g === 'Mouth') d.open = false;
+    d.innerHTML = `<summary>${g} <span class="stats">(${ns.length})</span></summary>`;
+    for (const n of ns) {
+      const r = document.createElement('label'); r.className = 'sl';
+      r.innerHTML = `<span title="${n}">${n}</span><input type="range" min="0" max="1" step="0.01" value="0" data-m="${n}" aria-label="${n}"><span>0.00</span>`;
+      r.querySelector('input').oninput = e => { talking = false; loop = null; setMorph(n, +e.target.value, true); };
+      d.appendChild(r);
+    }
+    root.appendChild(d);
+  }
+}
+
+const loader = new THREE.GLTFLoader();
+// KHR_materials_variants: load every variant material inside the glTF parse (afterRoot), so switching is instant
+loader.register(parser => ({name: 'rts_variant_preload', afterRoot: () => {
+  const idx = new Set();
+  for (const m of parser.json.meshes || []) for (const p of m.primitives) {
+    const e = (p.extensions || {}).KHR_materials_variants; if (e) e.mappings.forEach(mp => idx.add(mp.material));
+  }
+  return Promise.all([...idx].map(i => parser.getDependency('material', i)));
+}}));
+const b64 = $('#glb').textContent.trim();
+const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+const partsPromise = (() => {   // optional parts GLB (alternate hair / beards / brows / lashes), parsed in parallel
+  const pb64 = $('#parts').textContent.trim();
+  if (!pb64 || pb64.startsWith('__')) return Promise.resolve(null);
+  const pbin = Uint8Array.from(atob(pb64), c => c.charCodeAt(0));
+  return new Promise((res, rej) => loader.parse(pbin.buffer, '', res, rej));
+})();
+loader.parse(bin.buffer, '', gltf => {
+  model = gltf.scene; scene.add(model);
+  model.traverse(o => { if (o.isMesh) gltfOf.set(o, gltf); });
+  let tris = 0, verts = 0;
+  model.traverse(o => {
+    if (o.isBone) { bones[o.name] = o; rest[o.name] = o.quaternion.clone(); poseBase[o.name] = o.position.clone(); }
+    if (o.isMesh) {
+      o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false;
+      const g = o.geometry; verts += g.attributes.position.count; tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+      if (o.morphTargetDictionary) { morphMeshes.push(o); for (const n in o.morphTargetDictionary) if (!names.includes(n)) names.push(n); }
+      if (/_hair$/.test(o.name)) hairMeshes.push(o);
+      if (o.isSkinnedMesh) { skel = o.skeleton; skeletons.add(o.skeleton); }
+      const ms = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of ms) tweakMat(m);
+    }
+  });
+  const body = morphMeshes.find(m => /_body$/.test(m.name));
+  if (body) names = Object.keys(body.morphTargetDictionary).sort((a, b) => body.morphTargetDictionary[a] - body.morphTargetDictionary[b]).filter(n => !n.startsWith('cor_'));
+  let spec = body && body.userData.rts_correctives;
+  if (typeof spec === 'string') spec = JSON.parse(spec);
+  if (spec && spec.correctives) {
+    corMesh = body;
+    correctives = spec.correctives.map(c => Object.assign({}, c, {b: bones[c.bone], r: bones[c.ref], t: new THREE.Vector3(...c.target).normalize()}));
+  }
+  model.updateMatrixWorld(true); restY.foot = bones.foot_l.getWorldPosition(new THREE.Vector3()).y;
+  const helper = new THREE.SkeletonHelper(model); helper.visible = false; scene.add(helper);
+  buildSliders();
+  mkButtons($('#views'), Object.keys(VIEWS), n => goView(n), 'Body');
+  mkButtons($('#poses'), Object.keys(POSES), n => { currentPose = n; resetPose(); POSES[n](); }, 'A pose');
+  mkButtons($('#exprs'), Object.keys(EXPR), n => pickExpr(n, false), 'Neutral');
+  toggle($('#toggles'), 'Skeleton', false, on => helper.visible = on);
+  toggle($('#toggles'), 'Hair', true, on => { hairOn = on; if (CUST) applyParts(); else hairMeshes.forEach(h => h.visible = on); });
+  toggle($('#toggles'), 'Blink', !window.__NOBLINK__, on => { blinking = on; });
+  toggle($('#toggles'), 'Turntable', false, on => turntable = on);
+  if (correctives.length) toggle($('#toggles'), 'Correctives', !window.__NOCOR__, on => { corOn = on; driveCorrectives(); });
+  const nCust = names.filter(n => n.startsWith('cust_')).length;
+  $('#stats').textContent = `${Math.round(tris).toLocaleString()} tris · ${verts.toLocaleString()} verts · ${skel ? skel.bones.length : 0} bones · ${names.length - nCust} face shapes` + (nCust ? ` · ${nCust} customisation morphs` : '') + (correctives.length ? ` · ${correctives.length} pose correctives` : '');
+  goView(window.__VIEW__ || 'Body');
+  const finish = () => {
+    if (window.__CUST__ && CUST) applyRecipe(window.__CUST__);
+    if (window.__PANEL__ === 'cust' && CUST) showTab('cust');
+    if (window.__POSE__) { currentPose = window.__POSE__; resetPose(); POSES[window.__POSE__](); }
+    driveCorrectives();
+    if (window.__CAM__) {           // [px,py,pz, tx,ty,tz] or ['bone', camera offset xyz, target offset xyz] (posed bone)
+      const c = window.__CAM__.slice();
+      if (typeof c[0] === 'string') {
+        const h = bones[c.shift()].getWorldPosition(new THREE.Vector3());
+        const t = h.clone().add(new THREE.Vector3(c[3], c[4], c[5]));
+        camera.position.copy(t).add(new THREE.Vector3(c[0], c[1], c[2])); controls.target.copy(t);
+      } else { camera.position.set(c[0], c[1], c[2]); controls.target.set(c[3], c[4], c[5]); }
+      controls.update();
+    }
+    if (window.__EXPR__) { pickExpr(window.__EXPR__, true); blinking = false;
+      for (const b of document.querySelectorAll('#exprs button')) b.classList.toggle('on', b.textContent === window.__EXPR__); }
+    if (window.__NOBLINK__) blinking = false;
+    if (window.__CLICK__ && window.__CLICK__.length) {       // screenshot harness: click like a user, then play 1.5 s
+      for (const c of window.__CLICK__) for (const b of document.querySelectorAll('button')) if (b.textContent === c) b.click();
+      let t = tPrev; for (let i = 0; i < 90; i++) { t += 1000 / 60; update(t); }
+      tPrev = performance.now();
+    }
+    if (window.__TEST__) runTest();
+    status.textContent = ''; window.__READY__ = true;
+  };
+  setupCustomise(gltf).then(finish, e => { status.textContent = 'customisation failed: ' + e; finish(); });
+}, e => { status.textContent = 'failed to load model: ' + e; });
+
+// ---- customisation: cust_* morph sliders, alternate parts (parts GLB bound to this skeleton by joint name),
+//      KHR_materials_variants ('<category>:<option>', one per category) and skeleton refit from the per-morph
+//      joint offsets in the GLB's scene extras 'rts_customise' ----
+function tweakMat(m) { m.envMapIntensity = 0.55; if (m.transparent) m.depthWrite = false; }
+const SWATCH = {
+  skin: {fair: '#e9c6aa', tan: '#c99a74', brown: '#94613f', dark: '#5b3a28', weathered: '#dcb9a0', 'orc green': '#7d9a52', ashen: '#aab0bb'},
+  eyes: {brownlight: '#8c6a3e', brown: '#5b3b1e', green: '#5f8a4b', bluegreen: '#4e8a86', blue: '#4a70a6', lightblue: '#90b4da', deepblue: '#2f4f90', grey: '#8a9197', ice: '#c6dde6'}};
+const PART_LABEL = {hair: 'Hair', beard: 'Beard', eyebrows: 'Brows', eyelashes: 'Lashes'};
+const VAR_LABEL = {skin: 'Skin', eyes: 'Eyes', hair: 'Hair colour'};
+function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function showTab(t) {
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  $('#tab-shapes').hidden = t !== 'shapes'; $('#tab-cust').hidden = t !== 'cust';
+}
+function setCust(id, v, noRefit) {
+  const s = CUST.byId[id]; if (!s) return;
+  custVals[id] = v;
+  if (s.neg) setMorph(s.neg, Math.max(0, -v), true);
+  setMorph(s.pos, Math.max(0, v), true);
+  const inp = document.querySelector(`input[data-c="${id}"]`);
+  if (inp) { inp.value = v; inp.parentElement.lastChild.textContent = (v > 0 ? '+' : '') + v.toFixed(2); }
+  if (!noRefit) scheduleRefit();
+}
+let refitPending = false;
+function scheduleRefit() { if (!refitPending) { refitPending = true; requestAnimationFrame(() => { refitPending = false; refit(); }); } }
+function refit() {
+  // joint head deltas (glTF world) = sum(weight * offset); local translation = parent rest rotation^-1 (d - d_parent);
+  // then the inverse bind matrices are recomputed at rest so the skin stays bound, and the current pose is re-applied
+  if (!CUST || !CUST.bone_offsets) return;
+  const d = {};
+  if (refitOn) for (const s of CUST.sliders) {
+    const v = custVals[s.id] || 0; if (!v) continue;
+    const off = CUST.bone_offsets[v > 0 ? s.pos : s.neg]; if (!off) continue;
+    for (const b in off) (d[b] = d[b] || new THREE.Vector3()).addScaledVector(new THREE.Vector3(off[b][0], off[b][1], off[b][2]), Math.abs(v));
+  }
+  resetPose();
+  for (const n in bones) {
+    const b = bones[n], dv = d[n] ? d[n].clone() : new THREE.Vector3();
+    if (b.parent && b.parent.isBone && d[b.parent.name]) dv.sub(d[b.parent.name]);
+    b.position.copy(restPos[n]).add(dv.applyQuaternion(parentQInv[n]));
+  }
+  model.updateMatrixWorld(true);
+  skeletons.forEach(s => s.calculateInverses());
+  for (const n in bones) poseBase[n] = bones[n].position.clone();       // the new rest for resetPose / the pose solver
+  if (PK) PK.invalidate();
+  restY.foot = bones.foot_l.getWorldPosition(new THREE.Vector3()).y;
+  if (POSES[currentPose]) POSES[currentPose]();
+}
+function applyParts() {
+  for (const role in partObjs) for (const st in partObjs[role]) {
+    const vis = partSel[role] === st && (!(role === 'hair' || role === 'beard') || hairOn);
+    partObjs[role][st].forEach(o => o.visible = vis);
+  }
+}
+function setPart(role, st) { partSel[role] = st; applyParts(); syncUI(); }
+function setVariant(cat, opt) {
+  varSel[cat] = opt;
+  const name = cat + ':' + opt, jobs = [];
+  model.traverse(o => {
+    const ext = o.isMesh && o.userData.gltfExtensions && o.userData.gltfExtensions.KHR_materials_variants;
+    const g = ext && gltfOf.get(o); if (!g) return;
+    const vi = (((g.parser.json.extensions || {}).KHR_materials_variants || {}).variants || []).findIndex(v => v.name === name);
+    const mp = vi >= 0 && ext.mappings.find(m => m.variants.includes(vi)); if (!mp) return;
+    jobs.push(g.parser.getDependency('material', mp.material).then(mat => { o.material = mat; g.parser.assignFinalMaterial(o); tweakMat(o.material); }));
+  });
+  syncUI();
+  return Promise.all(jobs);
+}
+function recipe() {
+  const sl = {}; for (const s of CUST.sliders) if (custVals[s.id]) sl[s.id] = +custVals[s.id].toFixed(2);
+  return {kind: CUST.kind, sliders: sl, parts: {...partSel}, variants: {...varSel}};
+}
+function applyRecipe(r) {
+  if (r.seed !== undefined) return randomise(r.seed);
+  for (const s of CUST.sliders) setCust(s.id, (r.sliders || {})[s.id] || 0, true);
+  for (const role in (r.parts || {})) if (partObjs[role]) partSel[role] = r.parts[role];
+  applyParts();
+  for (const c in (r.variants || {})) setVariant(c, r.variants[c]);
+  refit(); syncUI();
+}
+function resetCust() {
+  for (const s of CUST.sliders) setCust(s.id, 0, true);
+  for (const role in CUST.parts) partSel[role] = (CUST.parts[role].find(p => p.default) || {style: 'none'}).style;
+  applyParts();
+  for (const c in CUST.variant_defaults) setVariant(c, CUST.variant_defaults[c]);
+  refit(); syncUI();
+}
+function randomise(seed) {
+  const r = seeded(seed === undefined ? (Math.random() * 4294967296) >>> 0 : seed), pick = a => a[Math.floor(r() * a.length)];
+  for (const s of CUST.sliders) setCust(s.id, r() < 0.8 ? +((r() * 2 - 1) * s.rand).toFixed(2) : 0, true);
+  if (CUST.byId.ears_pointed) setCust('ears_pointed', r() < 0.2 ? +(0.6 + 0.4 * r()).toFixed(2) : 0, true);
+  for (const role in CUST.parts) {
+    const sts = CUST.parts[role].map(p => p.style);
+    partSel[role] = role === 'beard' ? (sts.length > 1 && r() < 0.6 ? pick(sts.filter(x => x !== 'none')) : 'none')
+                  : role === 'hair' ? (r() < 0.1 ? 'none' : pick(sts.filter(x => x !== 'none'))) : pick(sts);
+  }
+  applyParts();
+  const tints = CUST.variant_tints || [];
+  setVariant('skin', pick(r() < 0.25 ? CUST.variants.skin : CUST.variants.skin.filter(t => !tints.includes(t))));
+  setVariant('eyes', pick(CUST.variants.eyes)); setVariant('hair', pick(CUST.variants.hair));
+  refit(); syncUI();
+}
+function syncUI() {
+  document.querySelectorAll('select[data-p]').forEach(sel => sel.value = partSel[sel.dataset.p]);
+  document.querySelectorAll('button[data-v]').forEach(b => { const [c, o] = b.dataset.v.split('|'); b.classList.toggle('on', varSel[c] === o); b.setAttribute('aria-pressed', varSel[c] === o); });
+}
+function buildCustUI() {
+  const look = $('#c-look');
+  let h = '<div class="lbl">Parts</div>';
+  for (const role of Object.keys(PART_LABEL)) if (CUST.parts[role] && CUST.parts[role].length > 1)
+    h += `<label class="pick"><span>${PART_LABEL[role]}</span><select data-p="${role}">` + CUST.parts[role].map(p => `<option value="${p.style}">${p.style}${p.default ? ' (default)' : ''}</option>`).join('') + '</select></label>';
+  for (const cat of Object.keys(VAR_LABEL)) {
+    const opts = (CUST.variants || {})[cat] || []; if (!opts.length) continue;
+    h += `<div class="lbl">${VAR_LABEL[cat]}</div><div class="chips">` + opts.map(o => {
+      let col = (SWATCH[cat] || {})[o];
+      if (cat === 'hair' && CUST.hair_colours && CUST.hair_colours[o]) col = 'rgb(' + CUST.hair_colours[o].srgb.map(x => Math.round(Math.min(1, x * 1.5) * 255)).join(',') + ')';
+      return `<button type="button" class="chip" data-v="${cat}|${o}"><span class="dot" style="background:${col || '#888'}"></span>${o}</button>`;
+    }).join('') + '</div>';
+  }
+  h += '<div class="lbl">Skeleton</div><div class="row" id="c-refit"></div>';
+  look.innerHTML = h;
+  look.querySelectorAll('select[data-p]').forEach(sel => sel.onchange = () => setPart(sel.dataset.p, sel.value));
+  look.querySelectorAll('button[data-v]').forEach(b => b.onclick = () => { const [c, o] = b.dataset.v.split('|'); setVariant(c, o); });
+  toggle($('#c-refit'), 'Refit joints to shape', true, on => { refitOn = on; refit(); });
+  const root = $('#c-sliders'), groups = [];
+  for (const s of CUST.sliders) if (!groups.includes(s.group)) groups.push(s.group);
+  for (const g of groups) {
+    const ss = CUST.sliders.filter(s => s.group === g);
+    const d = document.createElement('details'); d.open = g === 'Nose';
+    d.innerHTML = `<summary>${g} <span class="stats">(${ss.length})</span></summary>`;
+    for (const s of ss) {
+      const r = document.createElement('label'); r.className = 'sl cs';
+      const tip = `${s.label}: ${s.neg ? s.neg_label + ' (-1) ... ' : ''}${s.pos_label} (+1)  morphs ${s.neg ? s.neg + ', ' : ''}${s.pos}`;
+      r.innerHTML = `<span title="${tip}">${s.label}</span><input type="range" min="${s.neg ? -1 : 0}" max="1" step="0.01" value="0" data-c="${s.id}" aria-label="${s.label}" title="${tip}"><span>0.00</span>`;
+      r.querySelector('input').oninput = e => setCust(s.id, +e.target.value);
+      d.appendChild(r);
+    }
+    root.appendChild(d);
+  }
+  $('#c-rand').onclick = () => randomise();
+  $('#c-reset').onclick = () => resetCust();
+  $('#c-copy').onclick = () => {
+    const t = $('#recipe'); t.hidden = false; t.value = JSON.stringify(recipe(), null, 1); t.select();
+    if (navigator.clipboard) navigator.clipboard.writeText(t.value).catch(() => {});
+  };
+  document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  $('#tabs').hidden = false;
+}
+async function setupCustomise(gltf) {
+  CUST = (gltf.scene.userData || {}).rts_customise || null;
+  if (!CUST) return;
+  CUST.byId = {}; for (const s of CUST.sliders) CUST.byId[s.id] = s;
+  status.textContent = 'loading parts…';
+  const pg = await partsPromise;
+  if (pg) {
+    const skinned = []; pg.scene.traverse(o => { if (o.isSkinnedMesh) skinned.push(o); });
+    // a part node can hold several primitives (card beards: cards + shadow shell); three.js names the node's Group,
+    // not its meshes, so remember the node name on every primitive before the meshes are moved into the model
+    const nodeOfMesh = {}; (pg.parser.json.nodes || []).forEach(n => { if (n.mesh !== undefined) nodeOfMesh[n.mesh] = n.name; });
+    for (const m of skinned) { const a = pg.parser.associations.get(m); m.userData.rtsNode = (a && nodeOfMesh[a.meshes]) || m.name; }
+    for (const m of skinned) {
+      m.bind(new THREE.Skeleton(m.skeleton.bones.map(b => bones[b.name]), m.skeleton.boneInverses), m.bindMatrix);
+      skeletons.add(m.skeleton);
+      m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
+      (Array.isArray(m.material) ? m.material : [m.material]).forEach(tweakMat);
+      gltfOf.set(m, pg); model.add(m);
+      if (m.morphTargetDictionary) morphMeshes.push(m);
+    }
+  }
+  for (const n in bones) {
+    restPos[n] = bones[n].position.clone();
+    parentQInv[n] = bones[n].parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+  }
+  for (const role in CUST.parts) {
+    partObjs[role] = {};
+    for (const p of CUST.parts[role]) {
+      const objs = [];
+      if (p.node) model.traverse(o => { if (o.isMesh && (o.userData.rtsNode === p.node || o.name === p.node)) objs.push(o); });
+      partObjs[role][p.style] = objs;
+      if (p.default) partSel[role] = p.style;
+    }
+    if (!partSel[role]) partSel[role] = 'none';
+  }
+  for (const c in (CUST.variant_defaults || {})) varSel[c] = CUST.variant_defaults[c];
+  applyParts();
+  buildCustUI(); syncUI();
+}
+
+// expression presets as a user picks them (buttons, screenshot hooks, scripts/cust_viewer_shots.py): face weights
+// only, the customisation (cust_*) stays
+function pickExpr(n, instant) {
+  const p = EXPR[n] || {};
+  clearMorphs(instant); talking = n === 'Talk'; tStart = performance.now(); loop = p._loop || null;
+  for (const k in p) if (k[0] !== '_') setMorph(k, p[k], instant);
+}
+function update(now) {
+  if (model) {
+    if (turntable) model.rotation.y += 0.004;
+    driveCorrectives();
+    const dt = Math.min(0.1, Math.max(0, (now - tPrev) / 1000)); tPrev = Math.max(tPrev, now);   // never negative
+    const ease = 1 - Math.exp(-dt * 14);                      // ~70 ms time constant between expressions
+    const out = {};
+    for (const n of names) { const t = target[n] || 0; cur[n] = (cur[n] || 0) + (t - (cur[n] || 0)) * ease; out[n] = cur[n]; }
+    if (loop) { const s = (now - tStart) / 1000;             // e.g. the laugh bounce
+      for (const k in loop) { const [a, b, hz] = loop[k]; out[k] = a + (b - a) * (0.5 - 0.5 * Math.cos(s * hz * 2 * Math.PI)); } }
+    if (talking) {
+      const t = (now - tStart) / 1000 * 7.5, i = Math.floor(t) % TALK.length, f = t % 1;
+      const a = TALK[i], b = TALK[(i + 1) % TALK.length], s = f * f * (3 - 2 * f);
+      for (const n of names) if (n.startsWith('viseme_')) out[n] = (n === a ? 1 - s : 0) + (n === b ? s : 0);
+      out.browInnerUp = Math.max(out.browInnerUp || 0, 0.18 * Math.max(0, Math.sin((now - tStart) / 1000 * 1.7)));
+    }
+    if (blinking) { const t = (now / 1000) % 4.2, bl = t < 0.14 ? Math.sin(t / 0.14 * Math.PI) : 0;
+      out.eyeBlinkLeft = Math.max(out.eyeBlinkLeft || 0, bl); out.eyeBlinkRight = Math.max(out.eyeBlinkRight || 0, bl); }
+    for (const n in out) applyMorph(n, out[n]);
+  }
+}
+// test hook (scripts/viewer_check.py): plays every expression button like a user would, with the idle blink ON,
+// and records the influences the meshes actually receive every 50 ms over 6 s (> one blink period)
+function runTest() {
+  blinking = true;
+  const res = {meshes: {}, presets: {}};
+  for (const m of morphMeshes) res.meshes[m.name] = Object.keys(m.morphTargetDictionary);
+  for (const n of Object.keys(EXPR)) {
+    for (const b of document.querySelectorAll('#exprs button')) if (b.textContent === n) b.click();
+    const rec = {};
+    let t = tPrev;
+    for (let i = 0; i < 420; i++) {
+      t += 1000 / 60; update(t);
+      if (i < 60 || i % 3) continue;                        // 1 s to settle, then sample
+      for (const m of morphMeshes) for (const k in m.morphTargetDictionary) {
+        const v = m.morphTargetInfluences[m.morphTargetDictionary[k]], key = m.name + '|' + k;
+        const r = rec[key] || (rec[key] = [Infinity, -Infinity]);
+        r[0] = Math.min(r[0], v); r[1] = Math.max(r[1], v);
+      }
+    }
+    tPrev = t;
+    const out = {};
+    for (const key in rec) if (rec[key][1] > 1e-3) out[key] = rec[key].map(x => Math.round(x * 1000) / 1000);
+    res.presets[n] = out;
+  }
+  const pre = document.createElement('pre'); pre.id = '__test__'; pre.textContent = JSON.stringify(res);
+  document.body.appendChild(pre);
+}
+function tick(now) { requestAnimationFrame(tick); update(now); controls.update(); renderer.render(scene, camera); }
+requestAnimationFrame(tick);
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+</script>
+</body>
+</html>
